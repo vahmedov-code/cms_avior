@@ -22,25 +22,34 @@ $user = api_require_auth();
 
 /**
  * Ссылки на печатные документы заказа (публичные, без входа в CMS —
- * те же, что используются для отправки в WhatsApp/Telegram/Email, см.
- * src/print_templates.php). null, если документ ещё не сформирован:
+ * те же страницы, что используются для отправки в WhatsApp/Telegram/
+ * Email из веб-CMS, см. src/print_templates.php). Адресуются по
+ * id+public_token (уникальный токен заказа, колонка repairs.public_token) —
+ * так ссылка не палит телефон клиента и её не подобрать перебором.
+ * null, если документ ещё не сформирован:
  * receipt_url — пока не заполнена квитанция (receipt_ready = 0),
  * report_url — пока в заказе нет ни одной позиции (нечего включать в акт).
- * Требует настоящий site_url в config/config.php — иначе оба поля null.
+ * Оба поля также null, если у заказа почему-то нет public_token (не
+ * должно случаться для новых заказов — токен генерируется при создании)
+ * или если на сервере не настроен site_url в config/config.php.
  */
 function order_document_urls(array $repair, int $partsCount): array
 {
+    if (empty($repair['public_token'])) {
+        return ['receipt_url' => null, 'report_url' => null];
+    }
+
     $receiptUrl = null;
     if (!empty($repair['receipt_ready'])) {
         $receiptUrl = public_site_url(
-            'receipt_public.php?order_no=' . urlencode($repair['order_no']) . '&phone=' . urlencode($repair['client_phone'])
+            'receipt_public.php?id=' . (int) $repair['id'] . '&token=' . urlencode($repair['public_token'])
         );
     }
 
     $reportUrl = null;
     if ($partsCount > 0) {
         $reportUrl = public_site_url(
-            'act_public.php?order_no=' . urlencode($repair['order_no']) . '&phone=' . urlencode($repair['client_phone'])
+            'act_public.php?id=' . (int) $repair['id'] . '&token=' . urlencode($repair['public_token'])
         );
     }
 
@@ -89,7 +98,8 @@ if ($method === 'GET') {
     $limit = min(200, max(1, (int) ($_GET['limit'] ?? 50)));
 
     $sql = "SELECT r.id, r.order_no, r.order_type, r.status, r.device_type, r.device_model,
-                   r.created_at, r.updated_at, r.receipt_ready, c.full_name AS client_name, c.phone AS client_phone,
+                   r.created_at, r.updated_at, r.receipt_ready, r.public_token,
+                   c.full_name AS client_name, c.phone AS client_phone,
                    COALESCE((SELECT SUM(qty * price) FROM repair_parts WHERE repair_id = r.id), 0) AS total,
                    (SELECT COUNT(*) FROM repair_parts WHERE repair_id = r.id) AS parts_count
             FROM repairs r JOIN clients c ON c.id = r.client_id";
@@ -162,10 +172,10 @@ if ($method === 'POST') {
 
     $orderNo = next_order_no();
     $stmt = db()->prepare(
-        'INSERT INTO repairs (order_no, client_id, device_type, device_model, problem_description, status, price_estimate)
-         VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO repairs (order_no, client_id, device_type, device_model, problem_description, status, price_estimate, public_token)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     );
-    $stmt->execute([$orderNo, $clientId, $deviceType, $deviceModel ?: null, $problem ?: null, 'принят', $priceEstimate]);
+    $stmt->execute([$orderNo, $clientId, $deviceType, $deviceModel ?: null, $problem ?: null, 'принят', $priceEstimate, generate_public_token()]);
     $orderId = (int) db()->lastInsertId();
 
     $log = db()->prepare('INSERT INTO repair_status_log (repair_id, status, comment, changed_by) VALUES (?, ?, ?, ?)');

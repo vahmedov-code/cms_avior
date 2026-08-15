@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS repairs (
     receipt_note         VARCHAR(500) NULL,           -- примечание в квитанции о приёмке
     manager_name          VARCHAR(150) NULL,          -- ФИО мастера/менеджера, оформившего приём
     receipt_ready         TINYINT(1) NOT NULL DEFAULT 0, -- квитанция о приёмке заполнена
+    public_token          VARCHAR(64) NULL UNIQUE,     -- токен для публичных ссылок на квитанцию/акт (без входа в CMS)
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_repairs_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT,

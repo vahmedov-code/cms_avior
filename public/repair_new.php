@@ -38,10 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$error) {
         $orderNo = next_order_no();
         $stmt = db()->prepare(
-            'INSERT INTO repairs (order_no, client_id, device_type, device_model, problem_description, status, price_estimate)
-             VALUES (?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO repairs (order_no, client_id, device_type, device_model, problem_description, status, price_estimate, public_token)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->execute([$orderNo, $clientId, $deviceType, $deviceModel ?: null, $problem ?: null, 'принят', $priceEstimate]);
+        $stmt->execute([$orderNo, $clientId, $deviceType, $deviceModel ?: null, $problem ?: null, 'принят', $priceEstimate, generate_public_token()]);
         $repairId = (int) db()->lastInsertId();
 
         $log = db()->prepare('INSERT INTO repair_status_log (repair_id, status, comment, changed_by) VALUES (?, ?, ?, ?)');

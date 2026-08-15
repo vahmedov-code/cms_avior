@@ -3,7 +3,8 @@
  * Печатные документы заказа — квитанция о приёмке и акт выполненных работ.
  * Общая точка правды для вёрстки/стиля: используется и на странице CMS
  * (с формой редактирования/кнопками отправки), и на публичной ссылке
- * (доступ по order_no+phone, без входа в CMS — для WhatsApp/Telegram/Email).
+ * (доступ по id+public_token, без входа в CMS — для WhatsApp/Telegram/
+ * Email и мобильного приложения; см. receipt_public.php/act_public.php).
  *
  * $publicMode = true  → без кнопок «Изменить»/«Открыть в CMS»/отправки,
  *                        только печать (это уже сама «отправленная» ссылка).
@@ -21,7 +22,9 @@ function render_receipt_page(array $repair, bool $publicMode = false): string
     $statusUrl = public_site_url('order_status.php?order_no=' . urlencode($repair['order_no']) . '&phone=' . urlencode($repair['client_phone']));
     $qrSrc = $statusUrl ? 'https://api.qrserver.com/v1/create-qr-code/?size=110x110&margin=0&data=' . urlencode($statusUrl) : null;
 
-    $publicUrl = public_site_url('receipt_public.php?order_no=' . urlencode($repair['order_no']) . '&phone=' . urlencode($repair['client_phone']));
+    $publicUrl = !empty($repair['public_token'])
+        ? public_site_url('receipt_public.php?id=' . $id . '&token=' . urlencode($repair['public_token']))
+        : public_site_url('receipt_public.php?order_no=' . urlencode($repair['order_no']) . '&phone=' . urlencode($repair['client_phone']));
     $shareLinks = ($publicUrl && !$publicMode) ? build_share_links(
         $publicUrl,
         'Здравствуйте, ' . $repair['client_name'] . '! Ваша квитанция о приёмке по заказу ' . $repair['order_no'] . ':',
@@ -104,7 +107,9 @@ function render_act_page(array $repair, array $parts, bool $publicMode = false):
     $statusUrl = public_site_url('order_status.php?order_no=' . urlencode($repair['order_no']) . '&phone=' . urlencode($repair['client_phone']));
     $qrSrc = $statusUrl ? 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&data=' . urlencode($statusUrl) : null;
 
-    $publicUrl = public_site_url('act_public.php?order_no=' . urlencode($repair['order_no']) . '&phone=' . urlencode($repair['client_phone']));
+    $publicUrl = !empty($repair['public_token'])
+        ? public_site_url('act_public.php?id=' . $id . '&token=' . urlencode($repair['public_token']))
+        : public_site_url('act_public.php?order_no=' . urlencode($repair['order_no']) . '&phone=' . urlencode($repair['client_phone']));
     $shareLinks = ($publicUrl && !$publicMode) ? build_share_links(
         $publicUrl,
         'Здравствуйте, ' . $repair['client_name'] . '! Заказ ' . $repair['order_no'] . ' выполнен, акт выполненных работ:',

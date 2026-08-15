@@ -41,10 +41,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$error) {
         $orderNo = next_order_no();
         $stmt = db()->prepare(
-            "INSERT INTO repairs (order_no, order_type, client_id, device_type, problem_description, status, price_estimate)
-             VALUES (?, 'account_memo', ?, ?, ?, 'выдан', 0)"
+            "INSERT INTO repairs (order_no, order_type, client_id, device_type, problem_description, status, price_estimate, public_token)
+             VALUES (?, 'account_memo', ?, ?, ?, 'выдан', 0, ?)"
         );
-        $stmt->execute([$orderNo, $clientId, $accountType, 'Памятка по учётной записи оформлена и выдана клиенту на бумаге.']);
+        $stmt->execute([$orderNo, $clientId, $accountType, 'Памятка по учётной записи оформлена и выдана клиенту на бумаге.', generate_public_token()]);
         $repairId = (int) db()->lastInsertId();
 
         $log = db()->prepare('INSERT INTO repair_status_log (repair_id, status, comment, changed_by) VALUES (?, ?, ?, ?)');

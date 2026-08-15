@@ -222,6 +222,17 @@ function money_in_words_rub(float $amount): string
 }
 
 /**
+ * Случайный уникальный токен для публичных ссылок на квитанцию/акт заказа
+ * (без входа в CMS) — 64 hex-символа, криптографически случайный.
+ * Присваивается заказу один раз при создании (см. INSERT в repair_new.php,
+ * pc_build_new.php, account_memo_new.php, api/mobile/orders.php).
+ */
+function generate_public_token(): string
+{
+    return bin2hex(random_bytes(32));
+}
+
+/**
  * Ссылки «отправить» для печатных документов — WhatsApp/Telegram/Email.
  * $publicUrl — ссылка на публичный просмотр документа (без входа в CMS).
  */

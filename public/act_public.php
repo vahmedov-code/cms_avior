@@ -1,8 +1,12 @@
 <?php
 /**
- * Публичная ссылка на акт выполненных работ (для WhatsApp/Telegram/Email) —
- * без входа в CMS. Требует order_no + phone, как и остальные публичные
- * страницы заказа (order_status.php, receipt_public.php).
+ * Публичная ссылка на акт выполненных работ (для WhatsApp/Telegram/Email,
+ * мобильного приложения) — без входа в CMS. Два способа подтвердить
+ * доступ:
+ *   1) ?id=6&token=... — уникальный токен заказа (public_token), основной
+ *      способ, используется мобильным приложением и новыми ссылками;
+ *   2) ?order_no=26-005&phone=... — старый способ, для уже разосланных
+ *      ранее ссылок.
  */
 require __DIR__ . '/../src/bootstrap.php';
 
@@ -11,24 +15,35 @@ function only_digits_ap(string $s): string
     return preg_replace('/\D+/', '', $s) ?? '';
 }
 
+$id = (int) get('id');
+$token = get('token');
 $orderNo = get('order_no');
 $phone = get('phone');
 
-if ($orderNo === '' || $phone === '') {
-    http_response_code(404);
-    echo 'Не найдено.';
-    exit;
+$repair = null;
+
+if ($id > 0 && $token !== '') {
+    $stmt = db()->prepare(
+        'SELECT r.*, c.full_name AS client_name, c.phone AS client_phone
+         FROM repairs r JOIN clients c ON c.id = r.client_id
+         WHERE r.id = ? AND r.public_token = ? LIMIT 1'
+    );
+    $stmt->execute([$id, $token]);
+    $repair = $stmt->fetch();
+} elseif ($orderNo !== '' && $phone !== '') {
+    $stmt = db()->prepare(
+        'SELECT r.*, c.full_name AS client_name, c.phone AS client_phone
+         FROM repairs r JOIN clients c ON c.id = r.client_id
+         WHERE r.order_no = ? LIMIT 1'
+    );
+    $stmt->execute([$orderNo]);
+    $found = $stmt->fetch();
+    if ($found && only_digits_ap($found['client_phone']) === only_digits_ap($phone)) {
+        $repair = $found;
+    }
 }
 
-$stmt = db()->prepare(
-    'SELECT r.*, c.full_name AS client_name, c.phone AS client_phone
-     FROM repairs r JOIN clients c ON c.id = r.client_id
-     WHERE r.order_no = ? LIMIT 1'
-);
-$stmt->execute([$orderNo]);
-$repair = $stmt->fetch();
-
-if (!$repair || only_digits_ap($repair['client_phone']) !== only_digits_ap($phone)) {
+if (!$repair) {
     http_response_code(404);
     echo 'Акт не найден — проверьте ссылку.';
     exit;
