@@ -59,6 +59,22 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="module-arrow">Открыть →</div>
   </a>
 
+  <?php if (is_admin()): ?>
+  <a class="module-card active" href="employees.php">
+    <div class="module-icon">👥</div>
+    <div class="module-title">Сотрудники</div>
+    <div class="module-desc">Добавление и удаление учётных записей, роли, сброс паролей.</div>
+    <div class="module-arrow">Открыть →</div>
+  </a>
+  <?php endif; ?>
+
+  <a class="module-card active" href="profile.php">
+    <div class="module-icon">⚙️</div>
+    <div class="module-title">Настройки / профиль</div>
+    <div class="module-desc">Сменить свой пароль и отображаемое имя.</div>
+    <div class="module-arrow">Открыть →</div>
+  </a>
+
   <div class="module-card disabled">
     <span class="module-badge">скоро</span>
     <div class="module-icon">📦</div>

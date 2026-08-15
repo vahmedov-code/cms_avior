@@ -13,6 +13,21 @@ function require_login(): void
     }
 }
 
+function is_admin(): bool
+{
+    $user = current_user();
+    return $user !== null && ($user['role'] ?? '') === 'admin';
+}
+
+function require_admin(): void
+{
+    require_login();
+    if (!is_admin()) {
+        flash_set('Эта страница доступна только администраторам.', 'error');
+        redirect('index.php');
+    }
+}
+
 function attempt_login(string $username, string $password): bool
 {
     $stmt = db()->prepare('SELECT * FROM users WHERE username = ? LIMIT 1');

@@ -30,10 +30,13 @@ $user = current_user();
       <a href="clients.php" class="<?= $activeNav === 'clients' ? 'active' : '' ?>">Клиенты</a>
       <a href="finance.php" class="<?= $activeNav === 'finance' ? 'active' : '' ?>">Финансы</a>
       <a href="analytics.php" class="<?= $activeNav === 'analytics' ? 'active' : '' ?>">Аналитика</a>
+      <?php if (is_admin()): ?>
+        <a href="employees.php" class="<?= $activeNav === 'employees' ? 'active' : '' ?>">Сотрудники</a>
+      <?php endif; ?>
     </nav>
     <div class="header-user">
       <?php if ($user): ?>
-        <span><?= e($user['full_name']) ?></span>
+        <a href="profile.php" class="<?= $activeNav === 'profile' ? 'active' : '' ?>" style="margin-right:10px;"><?= e($user['full_name']) ?></a>
         <a href="logout.php" class="logout-link">Выйти</a>
       <?php endif; ?>
     </div>
