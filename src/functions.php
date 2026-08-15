@@ -43,16 +43,31 @@ function get(string $key, string $default = ''): string
 }
 
 /**
- * Генерирует следующий номер заказа в формате ГГ-XXX,
- * основываясь на количестве заказов, созданных в текущем году.
+ * Генерирует следующий номер заказа в формате ГГ-XXX — на основе
+ * МАКСИМАЛЬНОГО уже существующего номера за текущий год (не количества
+ * записей — раньше считали через COUNT(*), из-за чего удаление заказа
+ * (см. §5 PROJECT_STATE.md — админская функция удаления) сдвигало счётчик
+ * назад и следующий созданный заказ получал уже занятый номер —
+ * `SQLSTATE[23000] Duplicate entry ... for key 'order_no'`, проверено
+ * на практике 17.08). MAX() устойчив к пробелам от удалённых заказов —
+ * номер только растёт, независимо от того, сколько записей удалено.
  */
 function next_order_no(): string
 {
     $yy = date('y');
-    $stmt = db()->prepare("SELECT COUNT(*) AS c FROM repairs WHERE order_no LIKE ?");
+    $stmt = db()->prepare(
+        "SELECT order_no FROM repairs WHERE order_no LIKE ?
+         ORDER BY CAST(SUBSTRING(order_no, 4) AS UNSIGNED) DESC LIMIT 1"
+    );
     $stmt->execute([$yy . '-%']);
-    $count = (int) $stmt->fetch()['c'] + 1;
-    return sprintf('%s-%03d', $yy, $count);
+    $last = $stmt->fetch();
+
+    $nextNum = 1;
+    if ($last && preg_match('/^\d{2}-(\d+)$/', $last['order_no'], $m)) {
+        $nextNum = (int) $m[1] + 1;
+    }
+
+    return sprintf('%s-%03d', $yy, $nextNum);
 }
 
 /**
