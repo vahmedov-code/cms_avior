@@ -217,6 +217,14 @@ ENUM: repair/pc_build/account_memo; +поля квитанции — см. ни�
   (проверка `admin_count()`). Доступ ограничен через `require_admin()` в
   `src/auth.php` (`is_admin()` проверяет `current_user()['role']`). Ссылка
   в навигации и плитка на панели видны только администраторам.
+- **Удаление заказа** (только роль `admin`) — кнопка «🗑 Удалить заказ» на
+  `repair_view.php` (в шапке) и в списке `repairs.php` (иконка 🗑 в строке).
+  POST `action=delete_repair`, проверка `require_admin()` внутри обработчика
+  (не заглушка в шаблоне — реальная проверка на бэкенде, кнопка просто
+  скрыта в UI для не-admin). Подтверждение через `confirm()` в браузере.
+  `DELETE FROM repairs` — `repair_parts`/`repair_status_log` удаляются
+  каскадом (FK `ON DELETE CASCADE`), `sms_log.repair_id` обнуляется
+  (FK `ON DELETE SET NULL`), запись SMS-истории не теряется.
 - Публичный API статуса заказа (`public/api/status.php`).
 - **Мобильный API** (`public/api/mobile/*.php`) — для Android-приложения
   (Вейс собирает его сам через Gemini в Android Studio). Токен-аутентификация
