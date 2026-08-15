@@ -109,6 +109,18 @@ CREATE TABLE IF NOT EXISTS parts_catalog (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------
+-- Справочник известных моделей устройств (для подсказок автозаполнения,
+-- заполняется миграцией sql/migrations/2026_08_17_device_model_catalog.sql
+-- на ~200 распространённых моделей смартфонов/ноутбуков; на чистой
+-- установке таблица создаётся пустой — сиды применяются отдельно)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS device_model_catalog (
+    id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name       VARCHAR(150) NOT NULL UNIQUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------
 -- История изменений статуса заказа
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS repair_status_log (

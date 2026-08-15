@@ -283,14 +283,30 @@ function suggest_device_types(int $limit = 30): array
     return array_column($stmt->fetchAll(), 'device_type');
 }
 
-function suggest_device_models(int $limit = 150): array
+/**
+ * Подсказки моделей устройств — объединяет то, что реально чинили
+ * (`repairs.device_model`, приоритет по частоте использования), со
+ * справочником известных моделей (`device_model_catalog`, см. миграцию
+ * 2026_08_17_device_model_catalog.sql) — так подсказки работают сразу,
+ * даже пока своя история заказов небольшая, а часто встречающиеся модели
+ * всё равно поднимаются наверх списка по мере накопления заказов.
+ */
+function suggest_device_models(int $limit = 300): array
 {
     $stmt = db()->prepare(
-        "SELECT device_model FROM repairs WHERE device_model IS NOT NULL AND device_model <> ''
-         GROUP BY device_model ORDER BY COUNT(*) DESC LIMIT " . (int) $limit
+        "SELECT model, MAX(freq) AS freq FROM (
+            SELECT device_model AS model, COUNT(*) AS freq
+                FROM repairs WHERE device_model IS NOT NULL AND device_model <> ''
+                GROUP BY device_model
+            UNION ALL
+            SELECT name AS model, 0 AS freq FROM device_model_catalog
+         ) t
+         GROUP BY model
+         ORDER BY freq DESC, model ASC
+         LIMIT " . (int) $limit
     );
     $stmt->execute();
-    return array_column($stmt->fetchAll(), 'device_model');
+    return array_column($stmt->fetchAll(), 'model');
 }
 
 /** Топ частых формулировок поломки — для кнопок-подсказок над textarea. */
