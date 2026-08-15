@@ -169,7 +169,7 @@ require __DIR__ . '/../src/layout_header.php';
   </div>
 </div>
 
-<div class="no-print" style="display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start;">
+<div class="no-print repair-detail-grid">
   <div>
     <div style="margin-bottom:20px;">
       <span class="status-badge" data-status="<?= e($repair['status']) ?>" style="font-size:14px;"><?= e($repair['status']) ?></span>
