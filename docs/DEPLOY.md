@@ -1,5 +1,66 @@
 # Установка на сервер (SSH)
 
+## Боевой сервер АВИОР (актуально, не шаблон)
+
+Ниже — реальные данные для вашего сервера. Разделы «0» и далее — общая
+инструкция для установки с нуля где угодно (другой сервер, шаред-хостинг
+и т.п.), с плейсхолдерами вроде `ваш-домен.ру`.
+
+- **Домен:** `cms.avior.moscow` (подтверждён, SSL выпущен вручную, не меняется).
+- **Путь на сервере:** `/var/www/cms` (document root — `/var/www/cms/public`).
+- **ОС/веб-сервер:** Ubuntu 26.04, Nginx + PHP-FPM 8.5.
+- **БД:** MySQL, база `avior_cms`, пользователь `avior_user` (пароль — только
+  в `config/config.php` на сервере).
+- На том же сервере уже живут `avior.moscow` и `shop.avior.moscow` —
+  **их nginx-конфиги не трогать** при любых правках.
+
+### Если код уже на сервере (обычное обновление после пуша)
+
+```bash
+ssh ваш_логин@сервер
+cd /var/www/cms
+git pull
+```
+
+Если `git pull` ругается на «dubious ownership» (разово):
+```bash
+git config --global --add safe.directory /var/www/cms
+```
+
+Если в `git pull` пришли новые файлы в `sql/migrations/` — применить их:
+```bash
+mysqldump -u avior_user -p avior_cms > avior_cms_backup_$(date +%Y%m%d).sql   # бэкап перед миграцией
+mysql -u avior_user -p avior_cms < sql/migrations/<новый_файл>.sql
+```
+
+`config/config.php` и `config/setup.lock` не в git — `git pull` их не
+затронет, обновится только код.
+
+### Если кода на сервере ещё нет (самая первая заливка)
+
+```bash
+ssh ваш_логин@сервер
+cd /var/www
+git clone https://github.com/vahmedov-code/cms_avior.git cms
+cd cms
+cp config/config.example.php config/config.php
+nano config/config.php
+```
+
+В `config/config.php` вписать:
+- данные подключения к БД (`avior_cms` / `avior_user` / пароль);
+- `'site_url' => 'https://cms.avior.moscow',` (без этого не работают
+  QR-коды на квитанциях и кнопки отправки клиенту — см. PROJECT_STATE.md §5).
+
+Далее — база данных и nginx-конфиг: см. разделы «1.1 База данных» и
+«1.3 Document root → Вариант Б — Nginx» ниже, подставляя реальный домен
+и путь `/var/www/cms/public` вместо примеров с плейсхолдерами.
+
+После разворачивания — открыть `https://cms.avior.moscow/setup.php`,
+создать первого администратора (см. «1.4» ниже).
+
+---
+
 ## 0. Требования
 
 - PHP 7.4+ (лучше 8.x) с расширением `pdo_mysql`.
