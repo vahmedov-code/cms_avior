@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>АВИОР — смета на сборку ПК</title>
+<style>
+  :root{
+    --navy:#152a4e;
+    --navy-dark:#0e1e3a;
+    --gold:#d4a63a;
+    --bg:#f4f6fa;
+    --border:#dde3ec;
+    --text:#1c2436;
+    --muted:#6b7385;
+    --danger:#c0392b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Segoe UI", Roboto, Arial, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    padding:24px;
+  }
+  .sheet{
+    max-width:900px;
+    margin:0 auto;
+    background:#fff;
+    border-radius:10px;
+    box-shadow:0 2px 14px rgba(20,30,60,.08);
+  }
+  header{
+    background:linear-gradient(135deg,var(--navy),var(--navy-dark));
+    color:#fff;
+    padding:26px 32px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:20px;
+    flex-wrap:wrap;
+    border-top-left-radius:10px;
+    border-top-right-radius:10px;
+  }
+  .brand h1{
+    margin:0;
+    font-size:30px;
+    letter-spacing:3px;
+    color:var(--gold);
+  }
+  .brand-phone{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    margin-top:6px;
+    font-size:14px;
+    font-weight:600;
+    color:var(--gold);
+    text-decoration:none;
+  }
+  .brand-phone:hover{text-decoration:underline;}
+  .brand p{
+    margin:4px 0 0;
+    font-size:13px;
+    color:#cfd6e6;
+    line-height:1.5;
+  }
+  .brand-tag{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:#9fb0d0;
+    margin-top:6px;
+  }
+  .doc-meta{
+    text-align:right;
+    font-size:13px;
+    color:#dfe4ef;
+  }
+  .doc-meta input{
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.25);
+    color:#fff;
+    border-radius:4px;
+    padding:3px 6px;
+    font-size:13px;
+    margin-left:6px;
+    width:150px;
+  }
+  .doc-meta input::placeholder{color:#b7c1da;}
+  .doc-meta div{margin-bottom:6px;}
+  .back-link{
+    color:#cfd6e6;
+    font-size:12px;
+    text-decoration:none;
+  }
+  .back-link:hover{color:#fff;text-decoration:underline;}
+
+  .doc-title{
+    text-align:center;
+    font-size:19px;
+    font-weight:700;
+    color:var(--navy);
+    letter-spacing:.5px;
+    padding:20px 32px 0;
+  }
+
+  .client-block{
+    padding:18px 32px 6px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px 24px;
+  }
+  .field{display:flex;flex-direction:column;font-size:12px;color:var(--muted);}
+  .field input{
+    margin-top:4px;
+    padding:8px 10px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    font-size:14px;
+    color:var(--text);
+  }
+  .delivery-toggle{
+    grid-column:1 / -1;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    color:var(--text);
+    margin-top:2px;
+    cursor:pointer;
+  }
+  .delivery-toggle input{width:16px;height:16px;flex:none;}
+  .field.delivery-address{
+    grid-column:1 / -1;
+    display:none;
+  }
+  .field.delivery-address.show{display:flex;}
+
+  .table-wrap{padding:20px 32px 8px;}
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  thead th{
+    text-align:left;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    color:var(--muted);
+    border-bottom:2px solid var(--border);
+    padding:8px 6px;
+  }
+  tbody td{
+    padding:6px;
+    border-bottom:1px solid var(--border);
+    vertical-align:middle;
+  }
+  tbody tr[data-category="service"]{background:#fdf7e8;}
+  tbody input{
+    width:100%;
+    padding:7px 8px;
+    border:1px solid var(--border);
+    border-radius:5px;
+    font-size:14px;
+  }
+  tbody input[type="number"]{text-align:right;}
+  td.num-col{width:70px;}
+  td.price-col{width:110px;}
+  td.sum-col{width:120px;text-align:right;font-weight:600;padding-right:10px;}
+  td.del-col{width:34px;text-align:center;}
+  .del-btn{
+    background:none;
+    border:none;
+    color:var(--danger);
+    cursor:pointer;
+    font-size:18px;
+    line-height:1;
+    padding:4px;
+  }
+  .del-btn:hover{opacity:.7;}
+
+  .add-row-btn{
+    margin:12px 0 4px;
+    background:#eef1f8;
+    border:1px dashed #b9c3d9;
+    color:var(--navy);
+    padding:9px 14px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:14px;
+  }
+  .add-row-btn:hover{background:#e3e8f4;}
+
+  .add-wrap{position:relative;display:inline-block;}
+  .add-menu{
+    display:none;
+    position:absolute;
+    top:calc(100% + 8px);
+    left:0;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:8px;
+    box-shadow:0 10px 30px rgba(20,30,60,.16);
+    width:270px;
+    padding:10px;
+    z-index:40;
+    max-height:70vh;
+    overflow-y:auto;
+  }
+  .add-menu.open{display:block;}
+  .add-menu-title{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    color:var(--muted);
+    margin:10px 4px 4px;
+  }
+  .add-menu-title:first-child{margin-top:0;}
+  .add-menu label{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    padding:7px 4px;
+    font-size:14px;
+    cursor:pointer;
+    border-radius:5px;
+  }
+  .add-menu label:hover{background:#f2f4f9;}
+  .add-menu input[type="checkbox"]{width:16px;height:16px;flex:none;}
+  .add-menu-actions{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px solid var(--border);
+  }
+  .add-menu-actions button{flex:1;font-size:13px;padding:8px 6px;}
+
+  .totals{
+    padding:14px 32px 6px;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:6px;
+  }
+  .totals-row{
+    display:flex;
+    justify-content:space-between;
+    width:280px;
+    font-size:14px;
+  }
+  .totals-row input{
+    width:110px;
+    text-align:right;
+    padding:5px 8px;
+    border:1px solid var(--border);
+    border-radius:5px;
+  }
+  .totals-row.grand{
+    font-size:19px;
+    font-weight:700;
+    color:var(--navy);
+    border-top:2px solid var(--navy);
+    padding-top:8px;
+    margin-top:4px;
+  }
+
+  .actions{
+    padding:18px 32px 28px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    border-top:1px solid var(--border);
+    margin-top:10px;
+  }
+  button.action{
+    padding:10px 16px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:#fff;
+    cursor:pointer;
+    font-size:14px;
+    color:var(--text);
+  }
+  button.action.primary{
+    background:var(--navy);
+    color:#fff;
+    border-color:var(--navy);
+  }
+  button.action.primary:hover{background:var(--navy-dark);}
+  button.action:hover{background:#f2f4f9;}
+  button.action.warn{color:var(--danger);border-color:#f0c4bd;}
+
+  footer.legal{
+    text-align:center;
+    font-size:12px;
+    color:var(--muted);
+    padding:10px 0 22px;
+  }
+
+  /* Share menu */
+  .share-wrap{position:relative;display:inline-block;}
+  .share-menu{
+    display:none;
+    position:absolute;
+    bottom:calc(100% + 8px);
+    left:0;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:8px;
+    box-shadow:0 8px 28px rgba(20,30,60,.18);
+    width:220px;
+    padding:6px;
+    z-index:40;
+  }
+  .share-menu.open{display:block;}
+  .share-menu button{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    width:100%;
+    text-align:left;
+    padding:9px 10px;
+    border:none;
+    background:none;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:14px;
+    color:var(--text);
+  }
+  .share-menu button:hover{background:#f2f4f9;}
+  .share-menu .divider{height:1px;background:var(--border);margin:4px 2px;}
+  .toast{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--navy);
+    color:#fff;
+    padding:10px 18px;
+    border-radius:6px;
+    font-size:14px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+    z-index:60;
+  }
+  .toast.show{opacity:1;}
+
+  /* DB panel */
+  .db-overlay{
+    position:fixed;inset:0;background:rgba(15,20,35,.45);
+    display:none;align-items:center;justify-content:center;z-index:50;
+  }
+  .db-overlay.open{display:flex;}
+  .db-panel{
+    background:#fff;border-radius:10px;width:min(520px,92vw);
+    max-height:80vh;display:flex;flex-direction:column;overflow:hidden;
+    box-shadow:0 10px 40px rgba(0,0,0,.25);
+  }
+  .db-panel header{
+    background:var(--navy);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;
+  }
+  .db-panel header h2{margin:0;font-size:16px;color:#fff;font-weight:600;letter-spacing:0;}
+  .db-panel header button{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;}
+  .db-list{overflow-y:auto;padding:10px 20px;}
+  .db-item{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:9px 0;border-bottom:1px solid var(--border);font-size:14px;
+  }
+  .db-item span.name{flex:1;}
+  .db-item span.price{color:var(--muted);margin-right:14px;white-space:nowrap;}
+  .db-empty{padding:24px 0;text-align:center;color:var(--muted);font-size:14px;}
+  .db-panel-footer{padding:12px 20px;border-top:1px solid var(--border);text-align:right;}
+
+  .sheets-body{padding:18px 20px;font-size:14px;color:var(--text);}
+  .sheets-body p{margin:0 0 10px;color:var(--muted);line-height:1.5;font-size:13px;}
+  .sheets-body label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .sheets-body input{
+    width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;margin-bottom:12px;
+  }
+  .sheets-status{
+    display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;border-radius:20px;margin-bottom:12px;
+  }
+  .sheets-status.on{background:#e6f4ea;color:#1e7e34;}
+  .sheets-status.off{background:#f5f0e2;color:#8a6d1f;}
+  .sheets-status .dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+  .sheets-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+  @media (max-width: 640px){
+    body{padding:10px;}
+    .sheet{border-radius:8px;}
+    header{
+      padding:18px 18px;
+      flex-direction:column;
+      align-items:flex-start;
+      border-top-left-radius:8px;
+      border-top-right-radius:8px;
+    }
+    .brand h1{font-size:24px;}
+    .doc-meta{
+      text-align:left;
+      width:100%;
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .doc-meta div{margin-bottom:0;}
+    .doc-meta input{width:120px;}
+
+    .doc-title{padding:16px 18px 0;font-size:16px;}
+
+    .client-block{
+      grid-template-columns:1fr;
+      padding:16px 18px 4px;
+    }
+
+    .table-wrap{padding:16px 18px 6px;}
+
+    thead{
+      position:absolute;
+      width:1px;height:1px;
+      overflow:hidden;
+      clip:rect(0 0 0 0);
+      white-space:nowrap;
+    }
+    table, tbody, tr, td{display:block;width:100%;}
+    tbody tr{
+      border:1px solid var(--border);
+      border-radius:8px;
+      padding:10px 12px 12px;
+      margin-bottom:12px;
+      position:relative;
+    }
+    tbody td{
+      border-bottom:none;
+      padding:6px 0;
+    }
+    tbody td[data-label]::before{
+      content:attr(data-label);
+      display:block;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.4px;
+      color:var(--muted);
+      margin-bottom:3px;
+    }
+    tbody td.idx{display:none;}
+    tbody td.del-col{
+      position:absolute;
+      top:8px;
+      right:8px;
+      width:auto;
+      padding:0;
+    }
+    tbody td.sum-col{
+      text-align:left;
+      font-size:16px;
+      padding-right:0;
+    }
+
+    .add-wrap{display:block;width:100%;}
+    .add-row-btn{width:100%;}
+    .add-menu{
+      left:0;
+      right:0;
+      width:auto;
+      max-width:none;
+    }
+
+    .totals{padding:12px 18px 6px;align-items:stretch;}
+    .totals-row{width:100%;}
+
+    .actions{padding:14px 18px 22px;}
+    .actions button.action{flex:1 1 auto;}
+    .share-wrap{flex:1 1 auto;}
+    .share-wrap .action{width:100%;}
+    .share-menu{
+      left:0;
+      right:0;
+      width:auto;
+      max-width:none;
+    }
+
+    .sheets-body, .db-panel-footer{padding-left:16px;padding-right:16px;}
+  }
+
+  @media print{
+    body{background:#fff;padding:0;}
+    .sheet{box-shadow:none;border-radius:0;max-width:100%;padding-bottom:50px;}
+    .actions,.add-wrap,.del-col,.db-overlay,.toast,.back-link{display:none !important;}
+    header{background:var(--navy) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    footer.legal{
+      position:fixed;
+      bottom:0;
+      left:0;
+      right:0;
+      margin:0;
+      padding:12px 0;
+      background:#fff;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+  <header>
+    <div class="brand">
+      <h1>АВИОР</h1>
+      <a class="brand-phone" href="tel:+79012228111">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6.6 10.8c1.4 2.7 3.6 4.9 6.3 6.3l2.1-2.1c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.5.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.5.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+        <span>+7 (901) 222-81-11</span>
+      </a>
+      <p>Ремонт ноутбуков, смартфонов, планшетов · Сборка ПК на заказ</p>
+      <div class="brand-tag">г. Москва, Можайское шоссе, 4к1</div>
+    </div>
+    <div class="doc-meta">
+      <div><a href="index.php" class="back-link">← Панель управления</a></div>
+      <div>№ заказа: <input id="orderNo" placeholder="00-000"></div>
+      <div>Дата: <input id="orderDate" type="date"></div>
+    </div>
+  </header>
+
+  <div class="doc-title">Смета на сборку ПК</div>
+
+  <div class="client-block">
+    <label class="field">Клиент
+      <input id="clientName" placeholder="ФИО клиента">
+    </label>
+    <label class="field">Телефон
+      <input id="clientPhone" placeholder="+7 ...">
+    </label>
+    <label class="delivery-toggle">
+      <input type="checkbox" id="deliveryCheck">
+      🚚 Нужна доставка
+    </label>
+    <label class="field delivery-address" id="deliveryAddressWrap">Адрес доставки
+      <input id="deliveryAddress" placeholder="Улица, дом, квартира">
+    </label>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:36px;">#</th>
+          <th>Комплектующее</th>
+          <th class="num-col">Кол-во</th>
+          <th class="price-col">Цена, ₽</th>
+          <th class="sum-col">Сумма, ₽</th>
+          <th class="del-col"></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <datalist id="partsList"></datalist>
+    <div class="add-wrap">
+      <button class="add-row-btn" id="addRowBtn" type="button">+ Добавить комплектующее</button>
+      <div class="add-menu" id="addMenu">
+        <div class="add-menu-title">Комплектующие</div>
+        <label><input type="checkbox" value="Материнская плата"> Материнская плата</label>
+        <label><input type="checkbox" value="Процессор (ЦПУ)"> Процессор (ЦПУ)</label>
+        <label><input type="checkbox" value="Оперативная память (RAM)"> Оперативная память (RAM)</label>
+        <label><input type="checkbox" value="Видеокарта"> Видеокарта</label>
+        <label><input type="checkbox" value="Блок питания"> Блок питания</label>
+        <label><input type="checkbox" value="Накопитель (хранилище)"> Накопитель (хранилище)</label>
+        <label><input type="checkbox" value="Корпус"> Корпус</label>
+        <label><input type="checkbox" value="Прочее"> Прочее</label>
+        <div class="add-menu-title">Услуги</div>
+        <label><input type="checkbox" value="Сборка ПК" data-category="service"> Сборка ПК</label>
+        <label><input type="checkbox" value="Установка ПО" data-category="service"> Установка ПО</label>
+        <label><input type="checkbox" value="Доставка" data-category="service"> Доставка</label>
+        <label><input type="checkbox" value="Прочая услуга" data-category="service"> Прочая услуга</label>
+        <div class="add-menu-actions">
+          <button class="action" id="addEmptyBtn" type="button">Пустая строка</button>
+          <button class="action primary" id="addSelectedBtn" type="button">Добавить выбранное</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="totals">
+    <div class="totals-row">
+      <span>Комплектующие:</span><span id="partsTotal">0 ₽</span>
+    </div>
+    <div class="totals-row">
+      <span>Работа / сборка (услуги):</span><span id="servicesTotal">0 ₽</span>
+    </div>
+    <div class="totals-row grand">
+      <span>Итого:</span><span id="grandTotal">0 ₽</span>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="action primary" id="printBtn" type="button">🖨 Печать / PDF</button>
+    <div class="share-wrap">
+      <button class="action" id="shareBtn" type="button">📤 Поделиться</button>
+      <div class="share-menu" id="shareMenu">
+        <button id="shareNative" type="button" style="display:none;">📱 Через приложение…</button>
+        <button id="shareEmail" type="button">✉️ Email</button>
+        <button id="shareWhatsapp" type="button">💬 WhatsApp</button>
+        <button id="shareTelegram" type="button">✈️ Telegram</button>
+        <div class="divider"></div>
+        <button id="shareCopy" type="button">📋 Скопировать текст</button>
+      </div>
+    </div>
+    <button class="action" id="dbBtn" type="button">📦 База комплектующих</button>
+    <button class="action" id="sheetsBtn" type="button">🔗 Google Sheets</button>
+    <button class="action" id="newOrderBtn" type="button">🆕 Новый заказ</button>
+    <button class="action warn" id="clearRowsBtn" type="button">Очистить таблицу</button>
+  </div>
+
+  <footer class="legal">АВИОР · Можайское шоссе, 4к1, Москва</footer>
+</div>
+
+<div class="db-overlay" id="dbOverlay">
+  <div class="db-panel">
+    <header>
+      <h2>База комплектующих (сохранённые позиции)</h2>
+      <button id="dbClose" type="button">&times;</button>
+    </header>
+    <div class="db-list" id="dbList"></div>
+    <div class="db-panel-footer">
+      <button class="action warn" id="dbClearAll" type="button">Очистить всю базу</button>
+    </div>
+  </div>
+</div>
+
+<div class="db-overlay" id="sheetsOverlay">
+  <div class="db-panel">
+    <header>
+      <h2>База в Google Sheets</h2>
+      <button id="sheetsClose" type="button">&times;</button>
+    </header>
+    <div class="sheets-body">
+      <div class="sheets-status off" id="sheetsStatus"><span class="dot"></span><span id="sheetsStatusText">Не подключено — используется локальное хранилище браузера</span></div>
+      <p>Чтобы база комплектующих хранилась в Google Sheets и была доступна с любого компьютера: создайте таблицу, откройте «Расширения → Apps Script», вставьте код из файла <b>avior-sheets-backend.gs</b> (выдан отдельно), нажмите «Развернуть → Новое развёртывание → Веб-приложение», доступ «Все», скопируйте URL веб-приложения и вставьте ниже.</p>
+      <label>URL веб-приложения Apps Script</label>
+      <input id="sheetsUrl" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
+      <div class="sheets-actions">
+        <button class="action primary" id="sheetsSave" type="button">Сохранить и подключить</button>
+        <button class="action" id="sheetsSync" type="button">Синхронизировать сейчас</button>
+        <button class="action warn" id="sheetsDisconnect" type="button">Отключить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const DB_KEY = "aviorPartsDB_v1";
+  const SHEETS_KEY = "aviorSheetsUrl_v1";
+  const ORDER_COUNTER_KEY = "aviorOrderCounter_v1";
+  const rowsEl = document.getElementById("rows");
+  const partsListEl = document.getElementById("partsList");
+  const partsTotalEl = document.getElementById("partsTotal");
+  const servicesTotalEl = document.getElementById("servicesTotal");
+  const grandTotalEl = document.getElementById("grandTotal");
+
+  function fmt(n){
+    return (isNaN(n) ? 0 : n).toLocaleString("ru-RU") + " ₽";
+  }
+
+  // ---- order number counter ----
+  function nextOrderNumber(){
+    const counter = (parseInt(localStorage.getItem(ORDER_COUNTER_KEY), 10) || 0) + 1;
+    localStorage.setItem(ORDER_COUNTER_KEY, counter);
+    const yy = String(new Date().getFullYear()).slice(-2);
+    return yy + "-" + String(counter).padStart(3, "0");
+  }
+
+  // ---- parts DB (localStorage) ----
+  function loadDB(){
+    try{ return JSON.parse(localStorage.getItem(DB_KEY)) || []; }
+    catch(e){ return []; }
+  }
+  function saveDB(db){
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
+  }
+  function upsertPart(name, price){
+    name = name.trim();
+    if(!name) return;
+    const db = loadDB();
+    const existing = db.find(p => p.name.toLowerCase() === name.toLowerCase());
+    if(existing){
+      if(price > 0) existing.price = price;
+    } else {
+      db.push({name, price: price || 0});
+    }
+    saveDB(db);
+    refreshDatalist();
+    pushUpsertToSheets(name, price);
+  }
+  function findPart(name){
+    const db = loadDB();
+    return db.find(p => p.name.toLowerCase() === name.trim().toLowerCase());
+  }
+  function refreshDatalist(){
+    const db = loadDB().sort((a,b) => a.name.localeCompare(b.name, "ru"));
+    partsListEl.innerHTML = db.map(p => `<option value="${escapeHtml(p.name)}">`).join("");
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  // ---- rows ----
+  let rowCount = 0;
+  function addRow(data){
+    data = data || {};
+    rowCount++;
+    const tr = document.createElement("tr");
+    tr.dataset.category = data.category === "service" ? "service" : "part";
+    tr.innerHTML = `
+      <td class="idx" data-label="#">${rowCount}</td>
+      <td data-label="Комплектующее"><input type="text" class="name-input" list="partsList" placeholder="Например: SSD 1TB NVMe" value="${escapeHtml(data.name||"")}"></td>
+      <td class="num-col" data-label="Кол-во"><input type="number" class="qty-input" min="1" step="1" value="${data.qty||1}"></td>
+      <td class="price-col" data-label="Цена, ₽"><input type="number" class="price-input" min="0" step="1" value="${data.price||0}"></td>
+      <td class="sum-col" data-label="Сумма, ₽"><span class="sum-val">0 ₽</span></td>
+      <td class="del-col"><button class="del-btn" type="button" title="Удалить">&times;</button></td>
+    `;
+    rowsEl.appendChild(tr);
+
+    const nameInput = tr.querySelector(".name-input");
+    const qtyInput = tr.querySelector(".qty-input");
+    const priceInput = tr.querySelector(".price-input");
+    const sumVal = tr.querySelector(".sum-val");
+    const delBtn = tr.querySelector(".del-btn");
+
+    function recalcRow(){
+      const qty = parseFloat(qtyInput.value) || 0;
+      const price = parseFloat(priceInput.value) || 0;
+      sumVal.textContent = fmt(qty * price);
+      recalcTotals();
+    }
+
+    nameInput.addEventListener("change", function(){
+      const match = findPart(nameInput.value);
+      if(match && (!priceInput.value || parseFloat(priceInput.value) === 0)){
+        priceInput.value = match.price;
+      }
+      trySaveToDB();
+      recalcRow();
+    });
+    priceInput.addEventListener("input", recalcRow);
+    qtyInput.addEventListener("input", recalcRow);
+    priceInput.addEventListener("change", trySaveToDB);
+
+    function trySaveToDB(){
+      const name = nameInput.value.trim();
+      const price = parseFloat(priceInput.value) || 0;
+      if(name) upsertPart(name, price);
+    }
+
+    delBtn.addEventListener("click", function(){
+      tr.remove();
+      renumberRows();
+      recalcTotals();
+    });
+
+    recalcRow();
+  }
+
+  function renumberRows(){
+    [...rowsEl.querySelectorAll("tr")].forEach((tr,i)=>{
+      tr.querySelector(".idx").textContent = i+1;
+    });
+  }
+
+  function recalcTotals(){
+    let partsTotal = 0;
+    let servicesTotal = 0;
+    rowsEl.querySelectorAll("tr").forEach(tr=>{
+      const qty = parseFloat(tr.querySelector(".qty-input").value) || 0;
+      const price = parseFloat(tr.querySelector(".price-input").value) || 0;
+      const sum = qty * price;
+      if(tr.dataset.category === "service"){
+        servicesTotal += sum;
+      } else {
+        partsTotal += sum;
+      }
+    });
+    partsTotalEl.textContent = fmt(partsTotal);
+    servicesTotalEl.textContent = fmt(servicesTotal);
+    grandTotalEl.textContent = fmt(partsTotal + servicesTotal);
+  }
+
+  const addMenu = document.getElementById("addMenu");
+  const addRowBtn = document.getElementById("addRowBtn");
+  addRowBtn.addEventListener("click", (e)=>{
+    e.stopPropagation();
+    addMenu.classList.toggle("open");
+  });
+  addMenu.addEventListener("click", (e)=> e.stopPropagation());
+  document.addEventListener("click", ()=> addMenu.classList.remove("open"));
+
+  document.getElementById("addEmptyBtn").addEventListener("click", ()=>{
+    addRow();
+    addMenu.classList.remove("open");
+  });
+
+  document.getElementById("addSelectedBtn").addEventListener("click", ()=>{
+    const checked = addMenu.querySelectorAll('input[type="checkbox"]:checked');
+    if(checked.length === 0){
+      addRow();
+    } else {
+      checked.forEach(cb=>{
+        addRow({name: cb.value, qty: 1, price: 0, category: cb.dataset.category || "part"});
+        cb.checked = false;
+      });
+    }
+    addMenu.classList.remove("open");
+  });
+
+  const deliveryCheck = document.getElementById("deliveryCheck");
+  const deliveryAddressWrap = document.getElementById("deliveryAddressWrap");
+  deliveryCheck.addEventListener("change", ()=>{
+    deliveryAddressWrap.classList.toggle("show", deliveryCheck.checked);
+    if(deliveryCheck.checked){
+      document.getElementById("deliveryAddress").focus();
+    }
+  });
+
+  document.getElementById("printBtn").addEventListener("click", ()=> window.print());
+
+  document.getElementById("clearRowsBtn").addEventListener("click", ()=>{
+    if(confirm("Очистить все строки комплектующих в текущей смете? База сохранённых деталей не пострадает.")){
+      rowsEl.innerHTML = "";
+      rowCount = 0;
+      addRow();
+      recalcTotals();
+    }
+  });
+
+  document.getElementById("newOrderBtn").addEventListener("click", ()=>{
+    if(confirm("Начать новый заказ? Поля клиента и таблица будут очищены, номер заказа обновится автоматически.")){
+      document.getElementById("orderNo").value = nextOrderNumber();
+      document.getElementById("clientName").value = "";
+      document.getElementById("clientPhone").value = "";
+      document.getElementById("deliveryCheck").checked = false;
+      document.getElementById("deliveryAddress").value = "";
+      document.getElementById("deliveryAddressWrap").classList.remove("show");
+      document.getElementById("orderDate").valueAsDate = new Date();
+      rowsEl.innerHTML = "";
+      rowCount = 0;
+      addRow();
+      recalcTotals();
+    }
+  });
+
+  // ---- DB panel ----
+  const dbOverlay = document.getElementById("dbOverlay");
+  const dbList = document.getElementById("dbList");
+  function renderDBPanel(){
+    const db = loadDB().sort((a,b)=>a.name.localeCompare(b.name,"ru"));
+    if(db.length === 0){
+      dbList.innerHTML = `<div class="db-empty">База пуста. Добавьте комплектующие в смету — они сохранятся автоматически.</div>`;
+      return;
+    }
+    dbList.innerHTML = db.map(p => `
+      <div class="db-item" data-name="${escapeHtml(p.name)}">
+        <span class="name">${escapeHtml(p.name)}</span>
+        <span class="price">${fmt(p.price)}</span>
+        <button class="del-btn" title="Удалить из базы">&times;</button>
+      </div>
+    `).join("");
+  }
+  document.getElementById("dbBtn").addEventListener("click", ()=>{
+    renderDBPanel();
+    dbOverlay.classList.add("open");
+  });
+  document.getElementById("dbClose").addEventListener("click", ()=> dbOverlay.classList.remove("open"));
+  dbOverlay.addEventListener("click", (e)=>{ if(e.target === dbOverlay) dbOverlay.classList.remove("open"); });
+  dbList.addEventListener("click", (e)=>{
+    if(e.target.classList.contains("del-btn")){
+      const item = e.target.closest(".db-item");
+      const name = item.getAttribute("data-name");
+      const db = loadDB().filter(p => p.name !== name);
+      saveDB(db);
+      refreshDatalist();
+      renderDBPanel();
+      pushDeleteToSheets(name);
+    }
+  });
+  document.getElementById("dbClearAll").addEventListener("click", ()=>{
+    if(confirm("Полностью очистить базу сохранённых комплектующих?")){
+      saveDB([]);
+      refreshDatalist();
+      renderDBPanel();
+      pushClearAllToSheets();
+    }
+  });
+
+  // ---- Google Sheets sync ----
+  function getSheetsUrl(){
+    return (localStorage.getItem(SHEETS_KEY) || "").trim();
+  }
+  function setSheetsUrl(url){
+    localStorage.setItem(SHEETS_KEY, url.trim());
+  }
+
+  function updateSheetsStatus(){
+    const url = getSheetsUrl();
+    const statusEl = document.getElementById("sheetsStatus");
+    const statusText = document.getElementById("sheetsStatusText");
+    if(url){
+      statusEl.classList.remove("off");
+      statusEl.classList.add("on");
+      statusText.textContent = "Подключено к Google Sheets";
+    } else {
+      statusEl.classList.remove("on");
+      statusEl.classList.add("off");
+      statusText.textContent = "Не подключено — используется локальное хранилище браузера";
+    }
+  }
+
+  function syncFromSheets(showFeedback){
+    const url = getSheetsUrl();
+    if(!url) return;
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if(data && data.ok && Array.isArray(data.parts)){
+          saveDB(data.parts);
+          refreshDatalist();
+          if(showFeedback) showToast("Синхронизировано с Google Sheets (" + data.parts.length + " поз.)");
+        } else if(showFeedback){
+          showToast("Не удалось прочитать ответ от Google Sheets");
+        }
+      })
+      .catch(()=>{ if(showFeedback) showToast("Ошибка подключения к Google Sheets"); });
+  }
+
+  function pushUpsertToSheets(name, price){
+    const url = getSheetsUrl();
+    if(!url) return;
+    fetch(url, {
+      method: "POST",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify({action:"upsert", name, price})
+    }).catch(()=>{});
+  }
+  function pushDeleteToSheets(name){
+    const url = getSheetsUrl();
+    if(!url) return;
+    fetch(url, {
+      method: "POST",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify({action:"delete", name})
+    }).catch(()=>{});
+  }
+  function pushClearAllToSheets(){
+    const url = getSheetsUrl();
+    if(!url) return;
+    fetch(url, {
+      method: "POST",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify({action:"clearAll"})
+    }).catch(()=>{});
+  }
+
+  const sheetsOverlay = document.getElementById("sheetsOverlay");
+  const sheetsUrlInput = document.getElementById("sheetsUrl");
+  document.getElementById("sheetsBtn").addEventListener("click", ()=>{
+    sheetsUrlInput.value = getSheetsUrl();
+    updateSheetsStatus();
+    sheetsOverlay.classList.add("open");
+  });
+  document.getElementById("sheetsClose").addEventListener("click", ()=> sheetsOverlay.classList.remove("open"));
+  sheetsOverlay.addEventListener("click", (e)=>{ if(e.target === sheetsOverlay) sheetsOverlay.classList.remove("open"); });
+
+  document.getElementById("sheetsSave").addEventListener("click", ()=>{
+    const url = sheetsUrlInput.value.trim();
+    if(!url){ showToast("Введите URL веб-приложения"); return; }
+    setSheetsUrl(url);
+    updateSheetsStatus();
+    syncFromSheets(true);
+  });
+  document.getElementById("sheetsSync").addEventListener("click", ()=> syncFromSheets(true));
+  document.getElementById("sheetsDisconnect").addEventListener("click", ()=>{
+    setSheetsUrl("");
+    sheetsUrlInput.value = "";
+    updateSheetsStatus();
+    showToast("Google Sheets отключены, используется локальное хранилище");
+  });
+
+  // ---- share ----
+  function buildSummaryText(){
+    const orderNo = document.getElementById("orderNo").value.trim();
+    const orderDate = document.getElementById("orderDate").value;
+    const client = document.getElementById("clientName").value.trim();
+    const phone = document.getElementById("clientPhone").value.trim();
+
+    let lines = [];
+    lines.push("АВИОР — смета на сборку ПК");
+    lines.push("Можайское шоссе, 4к1, Москва");
+    lines.push("");
+    if(orderNo) lines.push("№ заказа: " + orderNo);
+    if(orderDate) lines.push("Дата: " + orderDate.split("-").reverse().join("."));
+    if(client) lines.push("Клиент: " + client);
+    if(phone) lines.push("Телефон: " + phone);
+    const deliveryAddr = document.getElementById("deliveryCheck").checked
+      ? document.getElementById("deliveryAddress").value.trim() : "";
+    if(deliveryAddr) lines.push("Адрес доставки: " + deliveryAddr);
+    const partRows = [];
+    const serviceRows = [];
+    rowsEl.querySelectorAll("tr").forEach(tr=>{
+      const name = tr.querySelector(".name-input").value.trim();
+      const qty = parseFloat(tr.querySelector(".qty-input").value) || 0;
+      const price = parseFloat(tr.querySelector(".price-input").value) || 0;
+      if(!name) return;
+      const line = `${name} — ${qty} x ${fmt(price)} = ${fmt(qty*price)}`;
+      if(tr.dataset.category === "service") serviceRows.push(line);
+      else partRows.push(line);
+    });
+
+    if(partRows.length){
+      lines.push("");
+      lines.push("Комплектующие:");
+      partRows.forEach((l,i)=> lines.push(`${i+1}. ${l}`));
+    }
+    if(serviceRows.length){
+      lines.push("");
+      lines.push("Услуги:");
+      serviceRows.forEach((l,i)=> lines.push(`${i+1}. ${l}`));
+    }
+
+    lines.push("");
+    lines.push("Комплектующие: " + partsTotalEl.textContent);
+    lines.push("Работа/сборка (услуги): " + servicesTotalEl.textContent);
+    lines.push("ИТОГО: " + grandTotalEl.textContent);
+
+    return lines.join("\n");
+  }
+
+  function showToast(msg){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(()=> t.classList.remove("show"), 2200);
+  }
+
+  const shareBtn = document.getElementById("shareBtn");
+  const shareMenu = document.getElementById("shareMenu");
+  shareBtn.addEventListener("click", (e)=>{
+    e.stopPropagation();
+    shareMenu.classList.toggle("open");
+  });
+  document.addEventListener("click", ()=> shareMenu.classList.remove("open"));
+  shareMenu.addEventListener("click", (e)=> e.stopPropagation());
+
+  const nativeShareBtn = document.getElementById("shareNative");
+  if(navigator.share){
+    nativeShareBtn.style.display = "flex";
+    nativeShareBtn.addEventListener("click", ()=>{
+      navigator.share({
+        title: "АВИОР — смета на сборку ПК",
+        text: buildSummaryText()
+      }).catch(()=>{});
+      shareMenu.classList.remove("open");
+    });
+  }
+
+  document.getElementById("shareEmail").addEventListener("click", ()=>{
+    const subject = encodeURIComponent("АВИОР — смета на сборку ПК" + (document.getElementById("orderNo").value ? " №" + document.getElementById("orderNo").value : ""));
+    const body = encodeURIComponent(buildSummaryText());
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    shareMenu.classList.remove("open");
+  });
+
+  document.getElementById("shareWhatsapp").addEventListener("click", ()=>{
+    const text = encodeURIComponent(buildSummaryText());
+    window.open(`https://wa.me/?text=${text}`, "_blank");
+    shareMenu.classList.remove("open");
+  });
+
+  document.getElementById("shareTelegram").addEventListener("click", ()=>{
+    const text = encodeURIComponent(buildSummaryText());
+    window.open(`https://t.me/share/url?url=&text=${text}`, "_blank");
+    shareMenu.classList.remove("open");
+  });
+
+  document.getElementById("shareCopy").addEventListener("click", ()=>{
+    const text = buildSummaryText();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(()=> showToast("Текст сметы скопирован")).catch(()=> fallbackCopy(text));
+    } else {
+      fallbackCopy(text);
+    }
+    shareMenu.classList.remove("open");
+  });
+
+  function fallbackCopy(text){
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand("copy"); showToast("Текст сметы скопирован"); }
+    catch(e){ showToast("Не удалось скопировать"); }
+    document.body.removeChild(ta);
+  }
+
+  // ---- init ----
+  document.getElementById("orderDate").valueAsDate = new Date();
+  if(!document.getElementById("orderNo").value.trim()){
+    document.getElementById("orderNo").value = nextOrderNumber();
+  }
+  refreshDatalist();
+  addRow();
+  recalcTotals();
+  updateSheetsStatus();
+  syncFromSheets(false);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!--
+  Пример виджета «Статус ремонта» для вставки на основной сайт АВИОР.
+  Скопируйте этот блок на страницу сайта и поправьте API_URL на реальный
+  адрес CMS после деплоя, например:
+    https://ваш-домен.ру/cms/public/api/status.php
+  (или /cms/api/status.php — смотря как разместите папку public на сервере).
+-->
+<div id="avior-status-widget" style="max-width:380px;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
+  <h3 style="margin:0 0 10px;">Проверить статус ремонта</h3>
+  <input id="avior-order-no" placeholder="Номер заказа, напр. 26-001" style="display:block;width:100%;padding:8px 10px;margin-bottom:8px;border:1px solid #dde3ec;border-radius:6px;">
+  <input id="avior-phone" placeholder="Телефон, указанный при заказе" style="display:block;width:100%;padding:8px 10px;margin-bottom:8px;border:1px solid #dde3ec;border-radius:6px;">
+  <button id="avior-check-btn" style="padding:9px 16px;background:#152a4e;color:#fff;border:none;border-radius:6px;cursor:pointer;">Проверить</button>
+  <div id="avior-status-result" style="margin-top:12px;font-size:14px;"></div>
+</div>
+
+<script>
+(function(){
+  var API_URL = 'https://ваш-домен.ру/cms/public/api/status.php'; // <-- поправить после деплоя
+
+  document.getElementById('avior-check-btn').addEventListener('click', function(){
+    var orderNo = document.getElementById('avior-order-no').value.trim();
+    var phone = document.getElementById('avior-phone').value.trim();
+    var resultEl = document.getElementById('avior-status-result');
+    resultEl.textContent = 'Проверяем...';
+
+    if (!orderNo || !phone) {
+      resultEl.textContent = 'Укажите номер заказа и телефон.';
+      return;
+    }
+
+    fetch(API_URL + '?order_no=' + encodeURIComponent(orderNo) + '&phone=' + encodeURIComponent(phone))
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (data.found) {
+          resultEl.innerHTML = '<strong>' + data.device + '</strong><br>Статус: <strong>' + data.status + '</strong>';
+        } else {
+          resultEl.textContent = 'Заказ не найден. Проверьте номер заказа и телефон.';
+        }
+      })
+      .catch(function(){
+        resultEl.textContent = 'Не удалось получить статус. Попробуйте позже.';
+      });
+  });
+})();
+</script>
