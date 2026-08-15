@@ -329,7 +329,12 @@ require __DIR__ . '/../src/layout_header.php';
         </label>
         <button type="submit" class="btn">Отправить SMS</button>
       </form>
-      <p style="font-size:12px;color:var(--muted);margin-top:8px;">SMS-провайдер пока не подключён — сообщение уйдёт в журнал. Настраивается в <code>config/config.php</code>.</p>
+      <?php $activeSmsProvider = sms_active_provider(); ?>
+      <?php if ($activeSmsProvider === null): ?>
+        <p style="font-size:12px;color:var(--muted);margin-top:8px;">SMS-провайдер пока не подключён — сообщение уйдёт в журнал. Настроить можно в <a href="settings.php">Настройках</a>.</p>
+      <?php else: ?>
+        <p style="font-size:12px;color:var(--good);margin-top:8px;">SMS отправится через: <?= e(sms_provider_label($activeSmsProvider)) ?>.</p>
+      <?php endif; ?>
     </div>
 
     <div class="table-card" style="padding:16px;">

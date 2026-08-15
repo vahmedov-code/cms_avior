@@ -376,6 +376,28 @@ function suggest_part_names(int $limit = 150): array
  * сотрудник может отредактировать перед отправкой. $totalDue — сумма к
  * оплате (обычно: комплектующие+услуги минус уже внесённая предоплата).
  */
+/**
+ * Реально ли настроен SMS-провайдер (для показа/скрытия предупреждения
+ * в интерфейсе) — та же логика приоритета, что и в send_sms() (sms.php):
+ * настройка из БД → config.php → ничего не настроено.
+ */
+function sms_active_provider(): ?string
+{
+    $provider = get_setting('sms_provider') ?: (config()['sms']['provider'] ?? null);
+    return $provider ?: null;
+}
+
+/** Человекочитаемое название провайдера — для отображения в интерфейсе. */
+function sms_provider_label(string $provider): string
+{
+    $labels = [
+        'smsru'           => 'SMS.ru',
+        'smsc'            => 'SMSC.ru',
+        'android_gateway' => 'Android-шлюз (свой телефон)',
+    ];
+    return $labels[$provider] ?? $provider;
+}
+
 function default_sms_message(array $repair, float $totalDue): string
 {
     if ($repair['status'] === 'готов') {
