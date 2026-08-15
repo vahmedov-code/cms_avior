@@ -420,16 +420,18 @@ function render_device_type_picker(string $fieldId, string $currentValue = ''): 
     $html = '<div class="device-type-picker">';
     foreach ($options as $label => $icon) {
         $checked = ($currentValue === $label) ? ' checked' : '';
+        $js = 'selectDeviceType(this, ' . json_encode($fieldId) . ', false)';
         $html .= '<label class="device-type-option">'
             . '<input type="radio" name="' . e($fieldId) . '_radio" value="' . e($label) . '"'
-            . ' onclick="selectDeviceType(this, ' . json_encode($fieldId) . ', false)"' . $checked . '>'
+            . ' onclick="' . e($js) . '"' . $checked . '>'
             . '<span class="dt-chip"><span class="dt-icon">' . $icon . '</span>' . e($label) . '</span>'
             . '</label>';
     }
     $otherChecked = ($currentValue !== '' && !$matchesPreset) ? ' checked' : '';
+    $jsOther = 'selectDeviceType(this, ' . json_encode($fieldId) . ', true)';
     $html .= '<label class="device-type-option">'
         . '<input type="radio" name="' . e($fieldId) . '_radio" value="__other__"'
-        . ' onclick="selectDeviceType(this, ' . json_encode($fieldId) . ', true)"' . $otherChecked . '>'
+        . ' onclick="' . e($jsOther) . '"' . $otherChecked . '>'
         . '<span class="dt-chip"><span class="dt-icon">✏️</span>Другое</span>'
         . '</label>';
     $html .= '</div>';
