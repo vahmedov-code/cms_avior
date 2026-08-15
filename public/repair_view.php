@@ -316,7 +316,8 @@ require __DIR__ . '/../src/layout_header.php';
         <input type="hidden" name="action" value="send_sms">
         <label class="field">Текст сообщения
           <textarea name="message" rows="3" placeholder="Например: Ваш ноутбук готов, можно забрать."><?php
-            echo e('Заказ ' . $repair['order_no'] . ': статус — ' . $repair['status'] . '.');
+            $totalDue = max(0, $partsTotal + $servicesTotal - (float) $repair['prepayment']);
+            echo e(default_sms_message($repair, $totalDue));
           ?></textarea>
         </label>
         <button type="submit" class="btn">Отправить SMS</button>

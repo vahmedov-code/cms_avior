@@ -329,6 +329,21 @@ function suggest_part_names(int $limit = 150): array
     return array_column($stmt->fetchAll(), 'name');
 }
 
+/**
+ * Готовый текст SMS для формы «SMS клиенту» — подставляется по умолчанию,
+ * сотрудник может отредактировать перед отправкой. $totalDue — сумма к
+ * оплате (обычно: комплектующие+услуги минус уже внесённая предоплата).
+ */
+function default_sms_message(array $repair, float $totalDue): string
+{
+    if ($repair['status'] === 'готов') {
+        $sum = number_format($totalDue, 0, '.', ' ');
+        return 'Здравствуйте! Вас приветствует сервис АВИОР. Устройство готово. С вас ' . $sum . ' ₽.';
+    }
+
+    return 'Заказ ' . $repair['order_no'] . ': статус — ' . $repair['status'] . '.';
+}
+
 /** Частые категории устройств с иконками — для визуального пикера типа устройства. */
 function device_type_options(): array
 {
