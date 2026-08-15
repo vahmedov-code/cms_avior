@@ -107,13 +107,14 @@ require __DIR__ . '/../src/layout_header.php';
   </div>
 
   <label class="field">Тип устройства
-    <input type="text" name="device_type" placeholder="Ноутбук / смартфон / планшет / ПК" required>
+    <input type="text" name="device_type" list="deviceTypeList" placeholder="Ноутбук / смартфон / планшет / ПК" required>
   </label>
   <label class="field">Модель
-    <input type="text" name="device_model">
+    <input type="text" name="device_model" list="deviceModelList">
   </label>
   <label class="field full">Описание проблемы
-    <textarea name="problem_description" rows="3"></textarea>
+    <?= render_suggestion_chips('problemField', suggest_problem_descriptions()) ?>
+    <textarea name="problem_description" id="problemField" rows="3"></textarea>
   </label>
   <label class="field">Оценка стоимости, ₽
     <input type="number" name="price_estimate" min="0" step="1" value="0">
@@ -123,5 +124,8 @@ require __DIR__ . '/../src/layout_header.php';
     <button type="submit" class="btn btn-primary">Создать заказ</button>
   </div>
 </form>
+
+<?= render_datalist('deviceTypeList', suggest_device_types()) ?>
+<?= render_datalist('deviceModelList', suggest_device_models()) ?>
 
 <?php require __DIR__ . '/../src/layout_footer.php'; ?>

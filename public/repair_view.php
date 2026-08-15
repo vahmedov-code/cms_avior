@@ -179,13 +179,14 @@ require __DIR__ . '/../src/layout_header.php';
     <form method="post" class="form-grid" style="margin-bottom:28px;">
       <input type="hidden" name="action" value="update_details">
       <label class="field">Тип устройства
-        <input type="text" name="device_type" value="<?= e($repair['device_type']) ?>" required>
+        <input type="text" name="device_type" list="deviceTypeList" value="<?= e($repair['device_type']) ?>" required>
       </label>
       <label class="field">Модель
-        <input type="text" name="device_model" value="<?= e($repair['device_model'] ?? '') ?>">
+        <input type="text" name="device_model" list="deviceModelList" value="<?= e($repair['device_model'] ?? '') ?>">
       </label>
       <label class="field full">Описание проблемы
-        <textarea name="problem_description" rows="3"><?= e($repair['problem_description'] ?? '') ?></textarea>
+        <?= render_suggestion_chips('problemFieldEdit', suggest_problem_descriptions()) ?>
+        <textarea name="problem_description" id="problemFieldEdit" rows="3"><?= e($repair['problem_description'] ?? '') ?></textarea>
       </label>
       <label class="field">Итоговая цена, ₽ (необязательно)
         <input type="number" name="price_final" min="0" step="1" value="<?= e($repair['price_final'] !== null ? (string) (float) $repair['price_final'] : '') ?>">
@@ -194,6 +195,8 @@ require __DIR__ . '/../src/layout_header.php';
         <button type="submit" class="btn">Сохранить изменения</button>
       </div>
     </form>
+    <?= render_datalist('deviceTypeList', suggest_device_types()) ?>
+    <?= render_datalist('deviceModelList', suggest_device_models()) ?>
 
     <h3 style="color:var(--navy);font-size:16px;">Комплектующие и услуги</h3>
     <div class="table-card" style="margin-bottom:14px;">
@@ -229,7 +232,7 @@ require __DIR__ . '/../src/layout_header.php';
     <form method="post" class="form-grid" style="max-width:560px;margin-bottom:28px;">
       <input type="hidden" name="action" value="add_part">
       <label class="field full">Название
-        <input type="text" name="name" required>
+        <input type="text" name="name" list="partNamesList" required>
       </label>
       <label class="field">Категория
         <select name="category">
@@ -253,6 +256,7 @@ require __DIR__ . '/../src/layout_header.php';
         <button type="submit" class="btn">+ Добавить</button>
       </div>
     </form>
+    <?= render_datalist('partNamesList', suggest_part_names()) ?>
 
     <div style="max-width:320px;margin-left:auto;font-size:14px;">
       <div style="display:flex;justify-content:space-between;"><span>Комплектующие:</span><strong><?= money($partsTotal) ?></strong></div>

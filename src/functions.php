@@ -266,3 +266,78 @@ function public_site_url(string $path): ?string
     }
     return $siteUrl . '/' . ltrim($path, '/');
 }
+
+/**
+ * Подсказки для автозаполнения форм — построены на истории уже введённых
+ * значений (никакого отдельного справочника вести не нужно, база учится
+ * сама по мере работы). Сортировка по частоте использования — то, что
+ * вводили чаще, показывается первым.
+ */
+function suggest_device_types(int $limit = 30): array
+{
+    $stmt = db()->prepare(
+        "SELECT device_type FROM repairs WHERE device_type IS NOT NULL AND device_type <> ''
+         GROUP BY device_type ORDER BY COUNT(*) DESC LIMIT " . (int) $limit
+    );
+    $stmt->execute();
+    return array_column($stmt->fetchAll(), 'device_type');
+}
+
+function suggest_device_models(int $limit = 150): array
+{
+    $stmt = db()->prepare(
+        "SELECT device_model FROM repairs WHERE device_model IS NOT NULL AND device_model <> ''
+         GROUP BY device_model ORDER BY COUNT(*) DESC LIMIT " . (int) $limit
+    );
+    $stmt->execute();
+    return array_column($stmt->fetchAll(), 'device_model');
+}
+
+/** Топ частых формулировок поломки — для кнопок-подсказок над textarea. */
+function suggest_problem_descriptions(int $limit = 20): array
+{
+    $stmt = db()->prepare(
+        "SELECT problem_description FROM repairs
+         WHERE problem_description IS NOT NULL AND problem_description <> ''
+         GROUP BY problem_description ORDER BY COUNT(*) DESC LIMIT " . (int) $limit
+    );
+    $stmt->execute();
+    return array_column($stmt->fetchAll(), 'problem_description');
+}
+
+/** Названия комплектующих/услуг из общего каталога (parts_catalog). */
+function suggest_part_names(int $limit = 150): array
+{
+    $stmt = db()->prepare('SELECT name FROM parts_catalog ORDER BY updated_at DESC LIMIT ' . (int) $limit);
+    $stmt->execute();
+    return array_column($stmt->fetchAll(), 'name');
+}
+
+/** Рендерит <datalist> с готовыми <option> из массива строк. */
+function render_datalist(string $id, array $values): string
+{
+    $html = '<datalist id="' . e($id) . '">';
+    foreach ($values as $v) {
+        $html .= '<option value="' . e($v) . '">';
+    }
+    return $html . '</datalist>';
+}
+
+/**
+ * Рендерит кнопки-подсказки над textarea/input: клик подставляет готовый
+ * текст в поле с указанным id. Используется там, где list=datalist не
+ * подходит (textarea их не поддерживает браузерами).
+ */
+function render_suggestion_chips(string $targetFieldId, array $values): string
+{
+    if (!$values) {
+        return '';
+    }
+    $html = '<div class="chip-suggestions">';
+    foreach ($values as $v) {
+        $short = mb_strlen($v) > 40 ? mb_substr($v, 0, 40) . '…' : $v;
+        $js = 'document.getElementById(' . json_encode($targetFieldId) . ').value = ' . json_encode($v) . ';';
+        $html .= '<button type="button" class="btn btn-sm chip" onclick="' . e($js) . '">' . e($short) . '</button>';
+    }
+    return $html . '</div>';
+}
