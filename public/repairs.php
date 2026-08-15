@@ -125,7 +125,17 @@ require __DIR__ . '/../src/layout_header.php';
           <td data-label="Статус"><span class="status-badge" data-status="<?= e($r['status']) ?>"><?= e($r['status']) ?></span></td>
           <td data-label="Сумма"><?= money((float) $r['parts_total']) ?></td>
           <td data-label="Обновлён"><?= date('d.m.Y H:i', strtotime($r['updated_at'])) ?></td>
-          <td data-label="" style="white-space:nowrap;"><a href="repair_view.php?id=<?= (int) $r['id'] ?>" class="btn btn-sm">Открыть</a> <a href="repair_receipt.php?id=<?= (int) $r['id'] ?>" class="btn btn-sm" title="Квитанция о приёмке">🧾</a> <a href="repair_act.php?id=<?= (int) $r['id'] ?>" class="btn btn-sm" title="Акт выполненных работ">📋</a></td>
+          <td data-label="" style="white-space:nowrap;">
+            <a href="repair_view.php?id=<?= (int) $r['id'] ?>" class="btn btn-sm">Открыть</a>
+            <a href="repair_receipt.php?id=<?= (int) $r['id'] ?>" class="btn btn-sm" title="Квитанция о приёмке">🧾</a>
+            <a href="repair_act.php?id=<?= (int) $r['id'] ?>" class="btn btn-sm" title="Акт выполненных работ">📋</a>
+            <?php if (is_admin()): ?>
+              <form method="post" action="repair_view.php?id=<?= (int) $r['id'] ?>" style="display:inline;" onsubmit="return confirm('Удалить заказ «<?= e($r['order_no']) ?>» безвозвратно? Отменить нельзя.');">
+                <input type="hidden" name="action" value="delete_repair">
+                <button type="submit" class="btn btn-sm btn-warn" title="Удалить заказ (только администратор)">🗑</button>
+              </form>
+            <?php endif; ?>
+          </td>
         </tr>
       <?php endforeach; ?>
     </tbody>

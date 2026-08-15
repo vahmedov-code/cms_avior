@@ -27,6 +27,14 @@ if (!$repair) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = post('action');
 
+    if ($action === 'delete_repair') {
+        require_admin();
+        $stmt = db()->prepare('DELETE FROM repairs WHERE id = ?');
+        $stmt->execute([$id]);
+        flash_set('Заказ ' . $repair['order_no'] . ' удалён.', 'success');
+        redirect('repairs.php');
+    }
+
     if ($action === 'update_status') {
         $newStatus = post('status');
         if (in_array($newStatus, $statuses, true) && $newStatus !== $repair['status']) {
@@ -135,6 +143,12 @@ require __DIR__ . '/../src/layout_header.php';
       <option value="repair_receipt.php?id=<?= (int) $id ?>">Квитанция о приёмке</option>
       <option value="repair_act.php?id=<?= (int) $id ?>">Акт выполненных работ</option>
     </select>
+    <?php if (is_admin()): ?>
+      <form method="post" class="no-print" style="display:inline;" onsubmit="return confirm('Удалить заказ «<?= e($repair['order_no']) ?>» безвозвратно? Все его позиции, история статусов и печатные документы удалятся вместе с ним. Отменить нельзя.');">
+        <input type="hidden" name="action" value="delete_repair">
+        <button type="submit" class="btn btn-sm btn-warn" title="Удалить заказ (только администратор)">🗑 Удалить заказ</button>
+      </form>
+    <?php endif; ?>
     <a href="repairs.php" class="btn btn-sm no-print">← К списку заказов</a>
   </div>
 </div>
