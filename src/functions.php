@@ -406,9 +406,8 @@ function default_sms_message(array $repair, float $totalDue): string
     }
 
     if ($repair['status'] === 'принят') {
-        $statusUrl = public_site_url('order_status.php?order_no=' . urlencode($repair['order_no']) . '&phone=' . urlencode($repair['client_phone']));
         $text = 'Здравствуйте! Вас приветствует сервис АВИОР. Заказ ' . $repair['order_no'] . ' принят в работу.';
-        return $statusUrl ? ($text . ' Статус можно отследить здесь: ' . $statusUrl) : $text;
+        return $text . ' Статус можно отследить здесь: https://avior.moscow/#status';
     }
 
     return 'Заказ ' . $repair['order_no'] . ': статус — ' . $repair['status'] . '.';
