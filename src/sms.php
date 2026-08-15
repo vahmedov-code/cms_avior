@@ -1,23 +1,32 @@
 <?php
 /**
- * Отправка SMS клиентам через SMS.ru (https://sms.ru/api) — базовая схема
- * без своего зарегистрированного имени отправителя (сообщение уходит с
- * общего/бесплатного имени): от 25 коп/SMS, от 7 коп при расходе
- * >5000₽/мес. Никакой абонентской платы, платите по факту отправленных
- * сообщений — подходит для разовых уведомлений по заказу.
+ * Отправка SMS клиентам. Три поддерживаемых провайдера — see below.
+ * Настраивается через CMS: администратор → Настройки (settings.php),
+ * без правки файлов на сервере (хранится в таблице settings, см.
+ * get_setting()/set_setting() в functions.php). Запасной вариант — старый
+ * способ через config/config.php, если settings.php ещё не используется.
  *
- * Включить (самый простой способ — прямо в интерфейсе):
- *  1. Зарегистрироваться на sms.ru, получить api_id (личный кабинет →
- *     Настройки → API).
- *  2. Войти в CMS администратором → Настройки (settings.php) → вписать
- *     провайдера и api_id, сохранить. Хранится в БД (таблица settings),
- *     правка файлов на сервере не нужна.
+ * 1) SMS.ru (https://sms.ru/api) — базовая схема без своего
+ *    зарегистрированного имени отправителя: от 25 коп/SMS, от 7 коп при
+ *    расходе >5000₽/мес. Без абонплаты. НО: без одобренного буквенного
+ *    отправителя SMS.ru в принципе отказывается слать (проверено на
+ *    практике — «Для работы с нашим сервисом необходимо создать
+ *    буквенного отправителя»). Регистрация имени — 5-7 рабочих дней.
  *
- * Запасной вариант (если таблица settings ещё не создана/недоступна) —
- * старый способ через config/config.php:
- *       'sms' => ['provider' => 'smsru', 'api_key' => 'ВАШ_API_ID'],
- * get_setting() из settings.php имеет приоритет; если там пусто —
- * используется значение из config.php.
+ * 2) SMSC.ru — заглушка, интеграция не реализована (см. закомментированный
+ *    пример ниже).
+ *
+ * 3) Android-шлюз (android_gateway) — SMS Gateway for Android
+ *    (https://github.com/capcom6/android-sms-gateway), облачный режим.
+ *    Свой Android-телефон с SIM-картой отправляет SMS через собственную
+ *    сотовую сеть — клиент видит настоящий номер сервиса, без модерации
+ *    и абонплаты за имя. Телефону нужен только интернет (Wi-Fi/мобильные
+ *    данные) — команда идёт через api.sms-gate.app, который сам держит
+ *    соединение с телефоном (обходит CGNAT операторов, проброс портов
+ *    не нужен). SIM-карта обязательна — сама SMS всё равно уходит через
+ *    сотовую сеть, интернет только доставляет команду «отправь».
+ *    Настройка на телефоне: приложение → переключить «Cloud Server» →
+ *    «Online» → скопировать логин/пароль в Настройки CMS.
  *
  * Если провайдер нигде не задан — сообщение просто логируется в
  * sms_log со статусом 'not_configured', ничего никуда не уходит
@@ -28,8 +37,7 @@
  * НЕ означает, что конкретное сообщение реально принято к отправке.
  * Настоящий статус лежит в sms.<номер>.status (OK/ERROR) — именно его
  * нужно проверять, иначе CMS будет бодро писать «отправлено», даже если
- * SMS.ru молча отклонил конкретный номер (например, из-за модерации
- * текста, пока не одобрено своё имя отправителя, и т.п.).
+ * SMS.ru молча отклонил конкретный номер.
  */
 
 /**
@@ -103,6 +111,48 @@ function send_sms(string $phone, string $message, ?int $repairId = null, ?string
         // $response = json_decode(file_get_contents($url), true);
         // $success  = isset($response['id']);
         // $status   = $success ? 'sent' : 'failed';
+    } elseif ($provider === 'android_gateway') {
+        // SMS Gateway for Android (https://github.com/capcom6/android-sms-gateway),
+        // облачный режим — SMS реально уходит через SIM-карту в собственном
+        // телефоне (свой номер как отправитель), без модерации/абонплаты.
+        // Телефону нужен только обычный интернет — команда идёт через
+        // api.sms-gate.app, который держит с ним постоянное соединение
+        // (обходит проблему CGNAT у мобильных операторов).
+        $login = get_setting('sms_gateway_login') ?: '';
+        $password = get_setting('sms_gateway_password') ?: '';
+        if ($login !== '' && $password !== '' && $phoneDigits !== '') {
+            $body = json_encode([
+                'textMessage'  => ['text' => $message],
+                'phoneNumbers' => ['+' . $phoneDigits],
+            ]);
+            $context = stream_context_create([
+                'http' => [
+                    'method'        => 'POST',
+                    'header'        => "Content-Type: application/json\r\n"
+                        . 'Authorization: Basic ' . base64_encode($login . ':' . $password) . "\r\n",
+                    'content'       => $body,
+                    'timeout'       => 15,
+                    'ignore_errors' => true,
+                ],
+            ]);
+            $raw = @file_get_contents('https://api.sms-gate.app/3rdparty/v1/message', false, $context);
+            $httpCode = 0;
+            if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m)) {
+                $httpCode = (int) $m[1];
+            }
+            $response = $raw !== false ? json_decode($raw, true) : null;
+            $success = $httpCode >= 200 && $httpCode < 300;
+            $status = $success ? 'sent' : 'failed';
+            if (!$success) {
+                $errorMessage = $response['message'] ?? $response['error']
+                    ?? ('HTTP ' . $httpCode . ($raw === false ? ' — нет ответа от api.sms-gate.app' : ''));
+            }
+        } elseif ($phoneDigits === '') {
+            $status = 'failed';
+            $errorMessage = 'У клиента не указан телефон или он в нераспознаваемом формате.';
+        } else {
+            $status = 'not_configured';
+        }
     }
 
     $stmt = db()->prepare(
