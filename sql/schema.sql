@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS repair_parts (
     qty        DECIMAL(10,2) NOT NULL DEFAULT 1,
     price      DECIMAL(10,2) NOT NULL DEFAULT 0,
     cost       DECIMAL(10,2) NOT NULL DEFAULT 0,   -- закупочная цена (для расчёта прибыли), необязательно
+    warranty   VARCHAR(50) NULL,                    -- гарантия по позиции («нет», «30 дней» и т.п.) — для акта
     CONSTRAINT fk_repair_parts_repair FOREIGN KEY (repair_id) REFERENCES repairs(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

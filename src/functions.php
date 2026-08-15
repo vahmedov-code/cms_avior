@@ -107,3 +107,151 @@ function company_info(): array
         'phone'   => '+7 (901) 222-81-11',
     ];
 }
+
+/** Деньги без символа валюты, с копейками через запятую — как в печатных бланках («6 500,00»). */
+function money_plain(float $n): string
+{
+    return number_format($n, 2, ',', ' ');
+}
+
+/**
+ * Склонение существительного по числу (1/2-4/5-20 и т.д.) — «1 рубль»,
+ * «2 рубля», «5 рублей». $one/$few/$many — формы для 1 / 2-4 / 5-20,0.
+ */
+function ru_plural(int $n, string $one, string $few, string $many): string
+{
+    $n = abs($n) % 100;
+    $n1 = $n % 10;
+    if ($n > 10 && $n < 20) {
+        return $many;
+    }
+    if ($n1 > 1 && $n1 < 5) {
+        return $few;
+    }
+    if ($n1 === 1) {
+        return $one;
+    }
+    return $many;
+}
+
+/** Целое число прописью на русском (используется только для сумм в акте). */
+function ru_number_to_words(int $number): string
+{
+    if ($number === 0) {
+        return 'ноль';
+    }
+
+    $onesMasc = ['', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять'];
+    $onesFem  = ['', 'одна', 'две', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять'];
+    $teens    = ['десять', 'одиннадцать', 'двенадцать', 'тринадцать', 'четырнадцать', 'пятнадцать', 'шестнадцать', 'семнадцать', 'восемнадцать', 'девятнадцать'];
+    $tens     = ['', '', 'двадцать', 'тридцать', 'сорок', 'пятьдесят', 'шестьдесят', 'семьдесят', 'восемьдесят', 'девяносто'];
+    $hundreds = ['', 'сто', 'двести', 'триста', 'четыреста', 'пятьсот', 'шестьсот', 'семьсот', 'восемьсот', 'девятьсот'];
+
+    // [форма-1, форма-2..4, форма-5..20/0, пол (0 — муж., 1 — жен.)]
+    $scales = [
+        0 => ['', '', '', 0],
+        1 => ['тысяча', 'тысячи', 'тысяч', 1],
+        2 => ['миллион', 'миллиона', 'миллионов', 0],
+        3 => ['миллиард', 'миллиарда', 'миллиардов', 0],
+    ];
+
+    $groups = [];
+    $n = $number;
+    while ($n > 0) {
+        $groups[] = $n % 1000;
+        $n = intdiv($n, 1000);
+    }
+
+    $parts = [];
+    for ($i = count($groups) - 1; $i >= 0; $i--) {
+        $g = $groups[$i];
+        if ($g === 0) {
+            continue;
+        }
+        $gender = $scales[$i][3] ?? 0;
+        $ones = $gender === 1 ? $onesFem : $onesMasc;
+
+        $words = [];
+        $h = intdiv($g, 100);
+        $rem = $g % 100;
+        if ($h > 0) {
+            $words[] = $hundreds[$h];
+        }
+        if ($rem >= 10 && $rem < 20) {
+            $words[] = $teens[$rem - 10];
+        } else {
+            $t = intdiv($rem, 10);
+            $o = $rem % 10;
+            if ($t > 0) {
+                $words[] = $tens[$t];
+            }
+            if ($o > 0) {
+                $words[] = $ones[$o];
+            }
+        }
+        if ($i > 0 && isset($scales[$i])) {
+            $words[] = ru_plural($g, $scales[$i][0], $scales[$i][1], $scales[$i][2]);
+        }
+        $parts[] = implode(' ', $words);
+    }
+
+    return implode(' ', $parts);
+}
+
+/**
+ * Сумма прописью для акта — «Шесть тысяч пятьсот рублей 00 копеек»
+ * (первая буква заглавная, остальное как в оригинале «прописи»).
+ */
+function money_in_words_rub(float $amount): string
+{
+    $rubles = (int) floor($amount + 0.001);
+    $kopecks = (int) round(($amount - $rubles) * 100);
+    if ($kopecks >= 100) {
+        $rubles++;
+        $kopecks -= 100;
+    }
+
+    $rubWords = $rubles === 0 ? 'ноль' : ru_number_to_words($rubles);
+    $rubLabel = ru_plural($rubles, 'рубль', 'рубля', 'рублей');
+    $kopLabel = ru_plural($kopecks, 'копейка', 'копейки', 'копеек');
+
+    $sentence = trim($rubWords . ' ' . $rubLabel);
+    $sentence = mb_strtoupper(mb_substr($sentence, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($sentence, 1, null, 'UTF-8');
+
+    return $sentence . ' ' . sprintf('%02d', $kopecks) . ' ' . $kopLabel;
+}
+
+/**
+ * Ссылки «отправить» для печатных документов — WhatsApp/Telegram/Email.
+ * $publicUrl — ссылка на публичный просмотр документа (без входа в CMS).
+ */
+function build_share_links(string $publicUrl, string $message, string $subject, string $clientPhone, ?string $clientEmail): array
+{
+    $textWithLink = $message . "\n" . $publicUrl;
+
+    $phoneDigits = preg_replace('/\D+/', '', $clientPhone) ?? '';
+    if ($phoneDigits !== '' && $phoneDigits[0] === '8' && strlen($phoneDigits) === 11) {
+        $phoneDigits = '7' . substr($phoneDigits, 1);
+    }
+
+    return [
+        'whatsapp' => 'https://wa.me/' . $phoneDigits . '?text=' . rawurlencode($textWithLink),
+        'telegram' => 'https://t.me/share/url?url=' . rawurlencode($publicUrl) . '&text=' . rawurlencode($message),
+        'email'    => 'mailto:' . ($clientEmail ?: '') . '?subject=' . rawurlencode($subject) . '&body=' . rawurlencode($textWithLink),
+    ];
+}
+
+/**
+ * Собирает публичный URL страницы (order_status.php, receipt_public.php,
+ * act_public.php) на реальном домене сайта. Возвращает null, если
+ * site_url в config.php ещё не настроен (стоит заглушка example.ru) —
+ * тогда QR/ссылки на отправку просто не показываются.
+ */
+function public_site_url(string $path): ?string
+{
+    $siteUrl = rtrim((string) (config()['site_url'] ?? ''), '/');
+    if ($siteUrl === '' || strpos($siteUrl, 'example.ru') !== false) {
+        return null;
+    }
+    return $siteUrl . '/' . ltrim($path, '/');
+}

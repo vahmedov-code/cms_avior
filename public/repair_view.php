@@ -60,12 +60,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $qty = (float) str_replace(',', '.', post('qty', '1'));
         $price = (float) str_replace(',', '.', post('price', '0'));
         $cost = (float) str_replace(',', '.', post('cost', '0'));
+        $warranty = post('warranty');
         $category = post('category') === 'service' ? 'service' : 'part';
         if ($name !== '') {
             $stmt = db()->prepare(
-                'INSERT INTO repair_parts (repair_id, category, name, qty, price, cost) VALUES (?, ?, ?, ?, ?, ?)'
+                'INSERT INTO repair_parts (repair_id, category, name, qty, price, cost, warranty) VALUES (?, ?, ?, ?, ?, ?, ?)'
             );
-            $stmt->execute([$id, $category, $name, $qty ?: 1, $price, $cost]);
+            $stmt->execute([$id, $category, $name, $qty ?: 1, $price, $cost, $warranty ?: null]);
 
             // подсказки на будущее — сохраняем в общий каталог комплектующих
             if ($category === 'part' && $price > 0) {
@@ -128,9 +129,13 @@ require __DIR__ . '/../src/layout_header.php';
 
 <div class="page-title">
   <h2>Заказ <?= e($repair['order_no']) ?> <span style="font-size:13px;font-weight:400;color:var(--muted);">· <?= e(order_type_label($repair['order_type'] ?? 'repair')) ?></span></h2>
-  <div style="display:flex;gap:8px;">
+  <div style="display:flex;gap:8px;align-items:center;">
     <button type="button" class="btn no-print" onclick="window.print()">🖨 Печать</button>
-    <a href="repair_receipt.php?id=<?= (int) $id ?>" class="btn no-print">🧾 Квитанция о приёмке</a>
+    <select class="btn no-print" style="cursor:pointer;" onchange="if(this.value){window.location.href=this.value;}this.selectedIndex=0;">
+      <option value="">📄 Печатные документы...</option>
+      <option value="repair_receipt.php?id=<?= (int) $id ?>">Квитанция о приёмке</option>
+      <option value="repair_act.php?id=<?= (int) $id ?>">Акт выполненных работ</option>
+    </select>
     <a href="repairs.php" class="btn btn-sm no-print">← К списку заказов</a>
   </div>
 </div>
@@ -195,11 +200,11 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="table-card" style="margin-bottom:14px;">
       <table>
         <thead>
-          <tr><th>Название</th><th style="width:70px;">Кол-во</th><th style="width:100px;">Цена, ₽</th><th style="width:100px;">Себест., ₽</th><th style="width:110px;">Сумма, ₽</th><th></th></tr>
+          <tr><th>Название</th><th style="width:70px;">Кол-во</th><th style="width:100px;">Цена, ₽</th><th style="width:100px;">Себест., ₽</th><th style="width:90px;">Гарантия</th><th style="width:110px;">Сумма, ₽</th><th></th></tr>
         </thead>
         <tbody>
           <?php if (!$parts): ?>
-            <tr><td colspan="6" style="text-align:center;color:var(--muted);">Пока ничего не добавлено.</td></tr>
+            <tr><td colspan="7" style="text-align:center;color:var(--muted);">Пока ничего не добавлено.</td></tr>
           <?php endif; ?>
           <?php foreach ($parts as $p): ?>
             <tr data-category="<?= e($p['category']) ?>">
@@ -207,6 +212,7 @@ require __DIR__ . '/../src/layout_header.php';
               <td data-label="Кол-во"><?= rtrim(rtrim((string) (float) $p['qty'], '0'), '.') ?></td>
               <td data-label="Цена"><?= money((float) $p['price']) ?></td>
               <td data-label="Себестоимость" style="color:var(--muted);"><?= money((float) ($p['cost'] ?? 0)) ?></td>
+              <td data-label="Гарантия"><?= $p['warranty'] ? e($p['warranty']) : '<span style="color:var(--muted);">нет</span>' ?></td>
               <td data-label="Сумма"><?= money((float) $p['qty'] * (float) $p['price']) ?></td>
               <td data-label="">
                 <form method="post" onsubmit="return confirm('Удалить позицию?');">
@@ -240,6 +246,9 @@ require __DIR__ . '/../src/layout_header.php';
       </label>
       <label class="field">Себестоимость, ₽ (необязательно)
         <input type="number" name="cost" value="0" min="0" step="1">
+      </label>
+      <label class="field">Гарантия (необязательно)
+        <input type="text" name="warranty" placeholder="нет / 30 дней / 6 мес.">
       </label>
       <div class="field full">
         <button type="submit" class="btn">+ Добавить</button>
