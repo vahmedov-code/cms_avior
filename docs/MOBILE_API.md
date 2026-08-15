@@ -129,9 +129,21 @@ Authorization: Bearer <token>
 { "ok": true, "orders": [
   { "id": 12, "order_no": "26-012", "order_type": "repair", "status": "в ремонте",
     "device_type": "Смартфон", "device_model": "Poco M7", "created_at": "...", "updated_at": "...",
-    "client_name": "Екатерина", "client_phone": "+7 963 762-26-66", "total": 6500 }
+    "client_name": "Екатерина", "client_phone": "+7 963 762-26-66", "total": 6500,
+    "receipt_ready": true,
+    "receipt_url": "https://cms.avior.moscow/receipt_public.php?order_no=26-012&phone=%2B7+963+762-26-66",
+    "report_url": "https://cms.avior.moscow/act_public.php?order_no=26-012&phone=%2B7+963+762-26-66" }
 ] }
 ```
+
+`receipt_url`/`report_url` — прямые ссылки на печатные документы (квитанция
+о приёмке / акт выполненных работ), уже готовые для открытия в браузере
+приложения или для «поделиться» — это те же публичные страницы, по
+которым отправляют документ клиенту в WhatsApp/Telegram/Email (без входа
+в CMS). `receipt_url` — `null`, если квитанция ещё не оформлена
+(`receipt_ready: false`). `report_url` — `null`, если в заказе пока нет
+ни одной позиции (нечего вносить в акт). Оба поля также будут `null`,
+если на сервере не настроен `site_url` в `config/config.php`.
 
 ### Деталь заказа (с позициями и историей статусов)
 
@@ -144,7 +156,10 @@ Authorization: Bearer <token>
   "id": 12, "order_no": "26-012", "order_type": "repair", "status": "в ремонте",
   "device_type": "Смартфон", "device_model": "Poco M7", "problem_description": "Битая матрица",
   "price_estimate": 6500, "prepayment": 6500, "client_name": "Екатерина", "client_phone": "...",
-  "parts": [ { "id": 1, "category": "part", "name": "Матрица", "qty": 1, "price": 6500 } ],
+  "receipt_ready": true,
+  "receipt_url": "https://cms.avior.moscow/receipt_public.php?order_no=26-012&phone=...",
+  "report_url": "https://cms.avior.moscow/act_public.php?order_no=26-012&phone=...",
+  "parts": [ { "id": 1, "category": "part", "name": "Матрица", "qty": 1, "price": 6500, "warranty": "нет" } ],
   "status_log": [ { "status": "в ремонте", "comment": null, "changed_at": "2026-08-14 09:00:00" } ]
 } }
 ```
@@ -236,7 +251,10 @@ data class Client(
 data class ClientsResponse(val ok: Boolean, val clients: List<Client>?, val error: String?)
 data class ClientResponse(val ok: Boolean, val client: Client?, val error: String?)
 
-data class OrderPart(val id: Int, val category: String, val name: String, val qty: Double, val price: Double)
+data class OrderPart(
+    val id: Int, val category: String, val name: String, val qty: Double, val price: Double,
+    val warranty: String? = null
+)
 data class StatusLogEntry(val status: String, val comment: String?, val changed_at: String)
 
 data class Order(
@@ -245,6 +263,9 @@ data class Order(
     val price_estimate: Double?, val prepayment: Double?, val total: Double?,
     val client_name: String, val client_phone: String,
     val created_at: String?, val updated_at: String?,
+    val receipt_ready: Boolean? = null,
+    val receipt_url: String? = null,
+    val report_url: String? = null,
     val parts: List<OrderPart>? = null,
     val status_log: List<StatusLogEntry>? = null
 )

@@ -20,6 +20,33 @@ require __DIR__ . '/../../../src/api_helpers.php';
 api_bootstrap();
 $user = api_require_auth();
 
+/**
+ * Ссылки на печатные документы заказа (публичные, без входа в CMS —
+ * те же, что используются для отправки в WhatsApp/Telegram/Email, см.
+ * src/print_templates.php). null, если документ ещё не сформирован:
+ * receipt_url — пока не заполнена квитанция (receipt_ready = 0),
+ * report_url — пока в заказе нет ни одной позиции (нечего включать в акт).
+ * Требует настоящий site_url в config/config.php — иначе оба поля null.
+ */
+function order_document_urls(array $repair, int $partsCount): array
+{
+    $receiptUrl = null;
+    if (!empty($repair['receipt_ready'])) {
+        $receiptUrl = public_site_url(
+            'receipt_public.php?order_no=' . urlencode($repair['order_no']) . '&phone=' . urlencode($repair['client_phone'])
+        );
+    }
+
+    $reportUrl = null;
+    if ($partsCount > 0) {
+        $reportUrl = public_site_url(
+            'act_public.php?order_no=' . urlencode($repair['order_no']) . '&phone=' . urlencode($repair['client_phone'])
+        );
+    }
+
+    return ['receipt_url' => $receiptUrl, 'report_url' => $reportUrl];
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
@@ -38,7 +65,7 @@ if ($method === 'GET') {
         }
 
         $partsStmt = db()->prepare(
-            'SELECT id, category, name, qty, price FROM repair_parts WHERE repair_id = ? ORDER BY id'
+            'SELECT id, category, name, qty, price, warranty FROM repair_parts WHERE repair_id = ? ORDER BY id'
         );
         $partsStmt->execute([$id]);
         $order['parts'] = $partsStmt->fetchAll();
@@ -49,6 +76,11 @@ if ($method === 'GET') {
         $logStmt->execute([$id]);
         $order['status_log'] = $logStmt->fetchAll();
 
+        $order['receipt_ready'] = (bool) ($order['receipt_ready'] ?? false);
+        $urls = order_document_urls($order, count($order['parts']));
+        $order['receipt_url'] = $urls['receipt_url'];
+        $order['report_url'] = $urls['report_url'];
+
         api_json(['ok' => true, 'order' => $order]);
     }
 
@@ -57,8 +89,9 @@ if ($method === 'GET') {
     $limit = min(200, max(1, (int) ($_GET['limit'] ?? 50)));
 
     $sql = "SELECT r.id, r.order_no, r.order_type, r.status, r.device_type, r.device_model,
-                   r.created_at, r.updated_at, c.full_name AS client_name, c.phone AS client_phone,
-                   COALESCE((SELECT SUM(qty * price) FROM repair_parts WHERE repair_id = r.id), 0) AS total
+                   r.created_at, r.updated_at, r.receipt_ready, c.full_name AS client_name, c.phone AS client_phone,
+                   COALESCE((SELECT SUM(qty * price) FROM repair_parts WHERE repair_id = r.id), 0) AS total,
+                   (SELECT COUNT(*) FROM repair_parts WHERE repair_id = r.id) AS parts_count
             FROM repairs r JOIN clients c ON c.id = r.client_id";
     $where = [];
     $params = [];
@@ -77,7 +110,19 @@ if ($method === 'GET') {
 
     $stmt = db()->prepare($sql);
     $stmt->execute($params);
-    api_json(['ok' => true, 'orders' => $stmt->fetchAll()]);
+
+    $orders = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $partsCount = (int) $row['parts_count'];
+        unset($row['parts_count']);
+        $row['receipt_ready'] = (bool) $row['receipt_ready'];
+        $urls = order_document_urls($row, $partsCount);
+        $row['receipt_url'] = $urls['receipt_url'];
+        $row['report_url'] = $urls['report_url'];
+        $orders[] = $row;
+    }
+
+    api_json(['ok' => true, 'orders' => $orders]);
 }
 
 if ($method === 'POST') {
@@ -131,7 +176,15 @@ if ($method === 'POST') {
          FROM repairs r JOIN clients c ON c.id = r.client_id WHERE r.id = ?'
     );
     $stmt->execute([$orderId]);
-    api_json(['ok' => true, 'order' => $stmt->fetch()], 201);
+    $newOrder = $stmt->fetch();
+    $newOrder['receipt_ready'] = (bool) ($newOrder['receipt_ready'] ?? false);
+    // У только что созданного заказа квитанция ещё не заполнена и позиций
+    // нет — оба поля всегда null сразу после создания, это ожидаемо.
+    $urls = order_document_urls($newOrder, 0);
+    $newOrder['receipt_url'] = $urls['receipt_url'];
+    $newOrder['report_url'] = $urls['report_url'];
+
+    api_json(['ok' => true, 'order' => $newOrder], 201);
 }
 
 api_error('Метод не поддерживается', 405);
