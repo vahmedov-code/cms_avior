@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS clients (
 CREATE TABLE IF NOT EXISTS repairs (
     id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     order_no            VARCHAR(20) NOT NULL UNIQUE,
+    order_type          ENUM('repair', 'pc_build', 'account_memo') NOT NULL DEFAULT 'repair',
     client_id           INT UNSIGNED NOT NULL,
     device_type         VARCHAR(100) NOT NULL,      -- ноутбук / смартфон / планшет / ПК и т.д.
     device_model        VARCHAR(150) NULL,
@@ -69,7 +70,22 @@ CREATE TABLE IF NOT EXISTS repair_parts (
     name       VARCHAR(255) NOT NULL,
     qty        DECIMAL(10,2) NOT NULL DEFAULT 1,
     price      DECIMAL(10,2) NOT NULL DEFAULT 0,
+    cost       DECIMAL(10,2) NOT NULL DEFAULT 0,   -- закупочная цена (для расчёта прибыли), необязательно
     CONSTRAINT fk_repair_parts_repair FOREIGN KEY (repair_id) REFERENCES repairs(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------
+-- Расходы бизнеса (аренда, зарплаты, закупки не по конкретному заказу)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS expenses (
+    id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    category     VARCHAR(100) NOT NULL,
+    description  VARCHAR(255) NULL,
+    amount       DECIMAL(10,2) NOT NULL,
+    expense_date DATE NOT NULL,
+    created_by   INT UNSIGNED NULL,
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_expenses_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------

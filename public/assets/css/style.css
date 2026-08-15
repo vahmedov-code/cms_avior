@@ -245,6 +245,17 @@ tbody tr:hover{background:#fafbfd;}
 /* Строки-услуги в таблице комплектующих (совпадает со сметой) */
 tr[data-category="service"]{background:#fdf7e8;}
 
+/* Печать карточки заказа */
+.print-only{display:none;}
+@media print{
+  body{background:#fff;padding:0;}
+  .sheet{box-shadow:none;border-radius:0;max-width:100%;}
+  header{display:none !important;}
+  footer.legal{display:none !important;}
+  .no-print{display:none !important;}
+  .print-only{display:block;}
+}
+
 /* Логин / установка — центрированная карточка */
 .auth-wrap{
   min-height:100vh;

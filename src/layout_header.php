@@ -26,9 +26,10 @@ $user = current_user();
     </a>
     <nav class="topnav">
       <a href="index.php" class="<?= $activeNav === 'dashboard' ? 'active' : '' ?>">Панель</a>
-      <a href="repairs.php" class="<?= $activeNav === 'repairs' ? 'active' : '' ?>">Ремонты</a>
+      <a href="repairs.php" class="<?= $activeNav === 'repairs' ? 'active' : '' ?>">Заказы</a>
       <a href="clients.php" class="<?= $activeNav === 'clients' ? 'active' : '' ?>">Клиенты</a>
-      <a href="smeta-sborka-pk.html" target="_blank" rel="noopener">Смета ПК ↗</a>
+      <a href="finance.php" class="<?= $activeNav === 'finance' ? 'active' : '' ?>">Финансы</a>
+      <a href="analytics.php" class="<?= $activeNav === 'analytics' ? 'active' : '' ?>">Аналитика</a>
     </nav>
     <div class="header-user">
       <?php if ($user): ?>

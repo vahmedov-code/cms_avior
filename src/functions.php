@@ -78,3 +78,20 @@ function client_source_label(?string $key): string
     }
     return client_sources()[$key] ?? $key;
 }
+
+/**
+ * Тип заказа — откуда он создан. Все типы попадают в общий список «Заказы».
+ */
+function order_types(): array
+{
+    return [
+        'repair'       => 'Ремонт',
+        'pc_build'     => 'Сборка ПК',
+        'account_memo' => 'Памятка по аккаунту',
+    ];
+}
+
+function order_type_label(?string $key): string
+{
+    return order_types()[$key] ?? ($key ?? 'Ремонт');
+}

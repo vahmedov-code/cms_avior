@@ -31,10 +31,31 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="module-arrow">Открыть →</div>
   </a>
 
-  <a class="module-card active" href="smeta-sborka-pk.html" target="_blank" rel="noopener">
+  <a class="module-card active" href="pc_build_new.php">
     <div class="module-icon">🖥️</div>
     <div class="module-title">Сборка ПК</div>
-    <div class="module-desc">Смета на сборку: комплектующие, услуги, печать и отправка клиенту.</div>
+    <div class="module-desc">Новый заказ на сборку — комплектующие и услуги, сразу в общем списке заказов.</div>
+    <div class="module-arrow">Открыть →</div>
+  </a>
+
+  <a class="module-card active" href="account_memo_new.php">
+    <div class="module-icon">🔐</div>
+    <div class="module-title">Памятка по аккаунту</div>
+    <div class="module-desc">Печатная форма данных Apple ID / Google для клиента. Пароли не хранятся в базе.</div>
+    <div class="module-arrow">Открыть →</div>
+  </a>
+
+  <a class="module-card active" href="finance.php">
+    <div class="module-icon">💰</div>
+    <div class="module-title">Финансы</div>
+    <div class="module-desc">Выручка, расходы, чистая прибыль по периодам.</div>
+    <div class="module-arrow">Открыть →</div>
+  </a>
+
+  <a class="module-card active" href="analytics.php">
+    <div class="module-icon">📊</div>
+    <div class="module-title">Аналитика</div>
+    <div class="module-desc">Источники клиентов, популярные устройства, прибыльность.</div>
     <div class="module-arrow">Открыть →</div>
   </a>
 
@@ -47,17 +68,17 @@ require __DIR__ . '/../src/layout_header.php';
 
   <div class="module-card disabled">
     <span class="module-badge">скоро</span>
-    <div class="module-icon">💰</div>
-    <div class="module-title">Финансы</div>
-    <div class="module-desc">Выручка, расходы, отчёты по периодам.</div>
-  </div>
-
-  <div class="module-card disabled">
-    <span class="module-badge">скоро</span>
     <div class="module-icon">📨</div>
     <div class="module-title">SMS-рассылки</div>
     <div class="module-desc">Массовые уведомления клиентам, шаблоны сообщений.</div>
   </div>
+
+  <a class="module-card" href="smeta-sborka-pk.html" target="_blank" rel="noopener" style="border-style:dashed;">
+    <div class="module-icon" style="background:#eef1f8;color:var(--navy);">📄</div>
+    <div class="module-title" style="color:var(--muted);">Смета ПК (офлайн-версия)</div>
+    <div class="module-desc">Старая автономная форма — работает без входа в CMS, но не попадает в «Заказы».</div>
+    <div class="module-arrow">Открыть →</div>
+  </a>
 </div>
 
 <?php require __DIR__ . '/../src/layout_footer.php'; ?>

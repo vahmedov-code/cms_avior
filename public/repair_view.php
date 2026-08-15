@@ -59,12 +59,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name = post('name');
         $qty = (float) str_replace(',', '.', post('qty', '1'));
         $price = (float) str_replace(',', '.', post('price', '0'));
+        $cost = (float) str_replace(',', '.', post('cost', '0'));
         $category = post('category') === 'service' ? 'service' : 'part';
         if ($name !== '') {
             $stmt = db()->prepare(
-                'INSERT INTO repair_parts (repair_id, category, name, qty, price) VALUES (?, ?, ?, ?, ?)'
+                'INSERT INTO repair_parts (repair_id, category, name, qty, price, cost) VALUES (?, ?, ?, ?, ?, ?)'
             );
-            $stmt->execute([$id, $category, $name, $qty ?: 1, $price]);
+            $stmt->execute([$id, $category, $name, $qty ?: 1, $price, $cost]);
 
             // подсказки на будущее — сохраняем в общий каталог комплектующих
             if ($category === 'part' && $price > 0) {
@@ -101,8 +102,10 @@ $parts = $partsStmt->fetchAll();
 
 $partsTotal = 0.0;
 $servicesTotal = 0.0;
+$marginTotal = 0.0;
 foreach ($parts as $p) {
     $sum = (float) $p['qty'] * (float) $p['price'];
+    $marginTotal += (float) $p['qty'] * ((float) $p['price'] - (float) ($p['cost'] ?? 0));
     if ($p['category'] === 'service') {
         $servicesTotal += $sum;
     } else {
@@ -124,11 +127,44 @@ require __DIR__ . '/../src/layout_header.php';
 ?>
 
 <div class="page-title">
-  <h2>Заказ <?= e($repair['order_no']) ?></h2>
-  <a href="repairs.php" class="btn btn-sm">← К списку заказов</a>
+  <h2>Заказ <?= e($repair['order_no']) ?> <span style="font-size:13px;font-weight:400;color:var(--muted);">· <?= e(order_type_label($repair['order_type'] ?? 'repair')) ?></span></h2>
+  <div style="display:flex;gap:8px;">
+    <button type="button" class="btn no-print" onclick="window.print()">🖨 Печать</button>
+    <a href="repairs.php" class="btn btn-sm no-print">← К списку заказов</a>
+  </div>
 </div>
 
-<div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start;">
+<div class="print-only">
+  <div style="text-align:center;margin-bottom:18px;">
+    <div style="font-size:22px;letter-spacing:3px;color:var(--gold);font-weight:800;">АВИОР</div>
+    <div style="font-size:12px;color:var(--muted);">Можайское шоссе, 4к1, Москва · +7 (901) 222-81-11</div>
+  </div>
+  <h2 style="text-align:center;margin-bottom:4px;">Заказ <?= e($repair['order_no']) ?> — <?= e(order_type_label($repair['order_type'] ?? 'repair')) ?></h2>
+  <p style="text-align:center;color:var(--muted);margin-top:0;">от <?= date('d.m.Y', strtotime($repair['created_at'])) ?> · статус: <?= e($repair['status']) ?></p>
+  <p><strong>Клиент:</strong> <?= e($repair['client_name']) ?> · <?= e($repair['client_phone']) ?></p>
+  <p><strong>Устройство:</strong> <?= e($repair['device_type']) ?> <?= e($repair['device_model'] ?? '') ?></p>
+  <?php if ($repair['problem_description']): ?><p><strong>Описание:</strong> <?= nl2br(e($repair['problem_description'])) ?></p><?php endif; ?>
+  <table style="width:100%;border-collapse:collapse;margin-top:12px;">
+    <thead><tr><th style="text-align:left;border-bottom:2px solid #ccc;padding:6px;">Название</th><th style="border-bottom:2px solid #ccc;padding:6px;">Кол-во</th><th style="border-bottom:2px solid #ccc;padding:6px;">Цена</th><th style="border-bottom:2px solid #ccc;padding:6px;">Сумма</th></tr></thead>
+    <tbody>
+      <?php foreach ($parts as $p): ?>
+        <tr>
+          <td style="padding:6px;border-bottom:1px solid #e5e5e5;"><?= e($p['name']) ?></td>
+          <td style="padding:6px;border-bottom:1px solid #e5e5e5;text-align:center;"><?= rtrim(rtrim((string) (float) $p['qty'], '0'), '.') ?></td>
+          <td style="padding:6px;border-bottom:1px solid #e5e5e5;text-align:right;"><?= money((float) $p['price']) ?></td>
+          <td style="padding:6px;border-bottom:1px solid #e5e5e5;text-align:right;"><?= money((float) $p['qty'] * (float) $p['price']) ?></td>
+        </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+  <div style="max-width:300px;margin-left:auto;margin-top:12px;">
+    <div style="display:flex;justify-content:space-between;"><span>Комплектующие:</span><strong><?= money($partsTotal) ?></strong></div>
+    <div style="display:flex;justify-content:space-between;"><span>Работа / услуги:</span><strong><?= money($servicesTotal) ?></strong></div>
+    <div style="display:flex;justify-content:space-between;font-size:17px;border-top:2px solid #152a4e;margin-top:6px;padding-top:6px;"><span>Итого:</span><strong><?= money($partsTotal + $servicesTotal) ?></strong></div>
+  </div>
+</div>
+
+<div class="no-print" style="display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start;">
   <div>
     <div style="margin-bottom:20px;">
       <span class="status-badge" data-status="<?= e($repair['status']) ?>" style="font-size:14px;"><?= e($repair['status']) ?></span>
@@ -158,17 +194,18 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="table-card" style="margin-bottom:14px;">
       <table>
         <thead>
-          <tr><th>Название</th><th style="width:70px;">Кол-во</th><th style="width:110px;">Цена, ₽</th><th style="width:110px;">Сумма, ₽</th><th></th></tr>
+          <tr><th>Название</th><th style="width:70px;">Кол-во</th><th style="width:100px;">Цена, ₽</th><th style="width:100px;">Себест., ₽</th><th style="width:110px;">Сумма, ₽</th><th></th></tr>
         </thead>
         <tbody>
           <?php if (!$parts): ?>
-            <tr><td colspan="5" style="text-align:center;color:var(--muted);">Пока ничего не добавлено.</td></tr>
+            <tr><td colspan="6" style="text-align:center;color:var(--muted);">Пока ничего не добавлено.</td></tr>
           <?php endif; ?>
           <?php foreach ($parts as $p): ?>
             <tr data-category="<?= e($p['category']) ?>">
               <td data-label="Название"><?= e($p['name']) ?></td>
               <td data-label="Кол-во"><?= rtrim(rtrim((string) (float) $p['qty'], '0'), '.') ?></td>
               <td data-label="Цена"><?= money((float) $p['price']) ?></td>
+              <td data-label="Себестоимость" style="color:var(--muted);"><?= money((float) ($p['cost'] ?? 0)) ?></td>
               <td data-label="Сумма"><?= money((float) $p['qty'] * (float) $p['price']) ?></td>
               <td data-label="">
                 <form method="post" onsubmit="return confirm('Удалить позицию?');">
@@ -200,6 +237,9 @@ require __DIR__ . '/../src/layout_header.php';
       <label class="field">Цена, ₽
         <input type="number" name="price" value="0" min="0" step="1">
       </label>
+      <label class="field">Себестоимость, ₽ (необязательно)
+        <input type="number" name="cost" value="0" min="0" step="1">
+      </label>
       <div class="field full">
         <button type="submit" class="btn">+ Добавить</button>
       </div>
@@ -210,6 +250,9 @@ require __DIR__ . '/../src/layout_header.php';
       <div style="display:flex;justify-content:space-between;"><span>Работа / услуги:</span><strong><?= money($servicesTotal) ?></strong></div>
       <div style="display:flex;justify-content:space-between;font-size:18px;color:var(--navy);border-top:2px solid var(--navy);margin-top:6px;padding-top:6px;">
         <span>Итого:</span><strong><?= money($partsTotal + $servicesTotal) ?></strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;color:var(--good);margin-top:4px;">
+        <span>Прибыль по заказу:</span><strong><?= money($marginTotal) ?></strong>
       </div>
     </div>
   </div>
