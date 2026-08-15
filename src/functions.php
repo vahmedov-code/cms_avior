@@ -95,3 +95,15 @@ function order_type_label(?string $key): string
 {
     return order_types()[$key] ?? ($key ?? 'Ремонт');
 }
+
+/**
+ * Реквизиты сервиса — используются в печатных формах (квитанция, памятка и т.д.).
+ */
+function company_info(): array
+{
+    return [
+        'name'    => 'АВИОР',
+        'address' => 'Можайское шоссе, 4к1, Москва',
+        'phone'   => '+7 (901) 222-81-11',
+    ];
+}

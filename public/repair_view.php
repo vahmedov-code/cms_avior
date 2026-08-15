@@ -130,6 +130,7 @@ require __DIR__ . '/../src/layout_header.php';
   <h2>Заказ <?= e($repair['order_no']) ?> <span style="font-size:13px;font-weight:400;color:var(--muted);">· <?= e(order_type_label($repair['order_type'] ?? 'repair')) ?></span></h2>
   <div style="display:flex;gap:8px;">
     <button type="button" class="btn no-print" onclick="window.print()">🖨 Печать</button>
+    <a href="repair_receipt.php?id=<?= (int) $id ?>" class="btn no-print">🧾 Квитанция о приёмке</a>
     <a href="repairs.php" class="btn btn-sm no-print">← К списку заказов</a>
   </div>
 </div>

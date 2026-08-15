@@ -41,6 +41,9 @@ CREATE TABLE IF NOT EXISTS repairs (
     client_id           INT UNSIGNED NOT NULL,
     device_type         VARCHAR(100) NOT NULL,      -- ноутбук / смартфон / планшет / ПК и т.д.
     device_model        VARCHAR(150) NULL,
+    device_serial       VARCHAR(100) NULL,          -- серийный номер (для квитанции о приёмке)
+    device_complete     VARCHAR(255) NULL,           -- комплектация (зарядка, чехол и т.п.)
+    device_condition    VARCHAR(255) NULL,           -- внешний вид на момент приёма
     problem_description TEXT NULL,
     status              ENUM(
                             'принят',
@@ -53,6 +56,11 @@ CREATE TABLE IF NOT EXISTS repairs (
                         ) NOT NULL DEFAULT 'принят',
     price_estimate      DECIMAL(10,2) NOT NULL DEFAULT 0,
     price_final         DECIMAL(10,2) NULL,
+    prepayment          DECIMAL(10,2) NOT NULL DEFAULT 0,  -- предоплата при приёме
+    deadline_date        DATE NULL,                  -- ориентировочная дата готовности
+    receipt_note         VARCHAR(500) NULL,           -- примечание в квитанции о приёмке
+    manager_name          VARCHAR(150) NULL,          -- ФИО мастера/менеджера, оформившего приём
+    receipt_ready         TINYINT(1) NOT NULL DEFAULT 0, -- квитанция о приёмке заполнена
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_repairs_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT,
