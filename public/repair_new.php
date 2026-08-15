@@ -107,7 +107,8 @@ require __DIR__ . '/../src/layout_header.php';
   </div>
 
   <label class="field">Тип устройства
-    <input type="text" name="device_type" list="deviceTypeList" placeholder="Ноутбук / смартфон / планшет / ПК" required>
+    <?= render_device_type_picker('deviceTypeField') ?>
+    <input type="text" name="device_type" id="deviceTypeField" list="deviceTypeList" placeholder="Или выберите вариант выше / впишите свой" required>
   </label>
   <label class="field">Модель
     <input type="text" name="device_model" list="deviceModelList">

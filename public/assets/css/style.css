@@ -257,6 +257,20 @@ tr[data-category="service"]{background:#fdf7e8;}
 .chip-suggestions .chip{background:#f2f4f9;border-color:var(--border);color:var(--muted);}
 .chip-suggestions .chip:hover{background:#e5e9f2;color:#1c2436;}
 
+/* Пикер типа устройства — карточки иконка+подпись поверх скрытого radio */
+.device-type-picker{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.device-type-option{cursor:pointer;}
+.device-type-option input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;}
+.device-type-option .dt-chip{
+  display:flex;align-items:center;gap:6px;padding:8px 12px;
+  border:1px solid var(--border);border-radius:8px;background:#fff;
+  font-size:13px;color:#1c2436;transition:background .15s,border-color .15s,color .15s;
+  user-select:none;
+}
+.device-type-option input:checked + .dt-chip{background:var(--navy);border-color:var(--navy);color:#fff;}
+.device-type-option input:focus-visible + .dt-chip{outline:2px solid var(--navy);outline-offset:1px;}
+.dt-icon{font-size:16px;line-height:1;}
+
 /* Печать карточки заказа */
 .print-only{display:none;}
 @media print{

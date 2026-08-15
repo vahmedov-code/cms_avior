@@ -193,7 +193,8 @@ require __DIR__ . '/../src/layout_header.php';
     <form method="post" class="form-grid" style="margin-bottom:28px;">
       <input type="hidden" name="action" value="update_details">
       <label class="field">Тип устройства
-        <input type="text" name="device_type" list="deviceTypeList" value="<?= e($repair['device_type']) ?>" required>
+        <?= render_device_type_picker('deviceTypeFieldEdit', $repair['device_type']) ?>
+        <input type="text" name="device_type" id="deviceTypeFieldEdit" list="deviceTypeList" value="<?= e($repair['device_type']) ?>" required<?= array_key_exists($repair['device_type'], device_type_options()) ? ' readonly' : '' ?>>
       </label>
       <label class="field">Модель
         <input type="text" name="device_model" list="deviceModelList" value="<?= e($repair['device_model'] ?? '') ?>">

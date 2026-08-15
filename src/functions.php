@@ -313,6 +313,57 @@ function suggest_part_names(int $limit = 150): array
     return array_column($stmt->fetchAll(), 'name');
 }
 
+/** Частые категории устройств с иконками — для визуального пикера типа устройства. */
+function device_type_options(): array
+{
+    return [
+        'Настольный ПК'   => '🖥️',
+        'Моноблок'        => '🖥',
+        'Ноутбук'         => '💻',
+        'Смартфон'        => '📱',
+        'Планшет'         => '🔲',
+        'Игровая консоль' => '🎮',
+        'Аксессуары'      => '🔌',
+    ];
+}
+
+/**
+ * Рендерит визуальный пикер типа устройства: кликабельные карточки
+ * иконка+подпись (по сути — радио-выбор, скрытые нативные radio под
+ * CSS-стилизованными "чипами") плюс пункт «Другое», открывающий обычный
+ * текстовый ввод. Итоговое значение всегда попадает в текстовое поле
+ * с id=$fieldId (тот же input, что отправляется формой как device_type) —
+ * JS-логика выбора одна на всё приложение, лежит в layout_footer.php
+ * (функция selectDeviceType), здесь только разметка.
+ *
+ * $currentValue — текущее значение поля (для формы редактирования):
+ * если совпадает с одним из пресетов — та карточка будет выделена сразу.
+ */
+function render_device_type_picker(string $fieldId, string $currentValue = ''): string
+{
+    $options = device_type_options();
+    $matchesPreset = array_key_exists($currentValue, $options);
+
+    $html = '<div class="device-type-picker">';
+    foreach ($options as $label => $icon) {
+        $checked = ($currentValue === $label) ? ' checked' : '';
+        $html .= '<label class="device-type-option">'
+            . '<input type="radio" name="' . e($fieldId) . '_radio" value="' . e($label) . '"'
+            . ' onclick="selectDeviceType(this, ' . json_encode($fieldId) . ', false)"' . $checked . '>'
+            . '<span class="dt-chip"><span class="dt-icon">' . $icon . '</span>' . e($label) . '</span>'
+            . '</label>';
+    }
+    $otherChecked = ($currentValue !== '' && !$matchesPreset) ? ' checked' : '';
+    $html .= '<label class="device-type-option">'
+        . '<input type="radio" name="' . e($fieldId) . '_radio" value="__other__"'
+        . ' onclick="selectDeviceType(this, ' . json_encode($fieldId) . ', true)"' . $otherChecked . '>'
+        . '<span class="dt-chip"><span class="dt-icon">✏️</span>Другое</span>'
+        . '</label>';
+    $html .= '</div>';
+
+    return $html;
+}
+
 /** Рендерит <datalist> с готовыми <option> из массива строк. */
 function render_datalist(string $id, array $values): string
 {
