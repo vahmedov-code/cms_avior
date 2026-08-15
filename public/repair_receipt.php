@@ -71,60 +71,60 @@ if (!$showForm) {
     $docDate = date('d.m.Y', strtotime($repair['created_at']));
     $deadlineStr = $repair['deadline_date'] ? date('d.m.Y', strtotime($repair['deadline_date'])) : '—';
 
+    // Ссылка на публичный статус заказа (без входа в CMS) — зашивается в QR.
+    $siteUrl = rtrim(config()['site_url'] ?? '', '/');
+    $statusUrl = $siteUrl !== '' && strpos($siteUrl, 'example.ru') === false
+        ? $siteUrl . '/order_status.php?order_no=' . urlencode($repair['order_no']) . '&phone=' . urlencode($repair['client_phone'])
+        : null;
+    $qrSrc = $statusUrl ? 'https://api.qrserver.com/v1/create-qr-code/?size=110x110&margin=0&data=' . urlencode($statusUrl) : null;
+
+    $money2 = static fn (float $n): string => number_format($n, 2, ',', ' ');
+
     ob_start();
     for ($copy = 1; $copy <= 2; $copy++): ?>
       <div class="copy">
-        <div class="copy-label"><?= $copy === 1 ? 'Экземпляр клиента' : 'Экземпляр сервиса' ?></div>
-        <h2>Квитанция № <?= e($repair['order_no']) ?> от <?= e($docDate) ?></h2>
-        <table class="head-table">
-          <tr>
-            <td class="label">Исполнитель:</td>
-            <td><?= e($company['name']) ?></td>
-            <td class="label">Адрес:</td>
-            <td><?= e($company['address']) ?></td>
-          </tr>
-          <tr>
-            <td class="label">Телефон:</td>
-            <td><?= e($company['phone']) ?></td>
-            <td class="label">Заказ:</td>
-            <td><?= e($repair['order_no']) ?></td>
-          </tr>
-        </table>
+        <div class="head-row">
+          <div class="head-fields">
+            <h1 class="doc-title">Квитанция № <?= e($repair['order_no']) ?> от <?= e($docDate) ?></h1>
+            <p class="field"><strong>Исполнитель:</strong> <?= e($company['name']) ?></p>
+            <p class="field"><strong>Адрес:</strong> <?= e($company['address']) ?></p>
+            <p class="field"><strong>Телефон:</strong> <?= e($company['phone']) ?></p>
+            <p class="field"><strong>Заказчик:</strong> <?= e($repair['client_name']) ?></p>
+            <p class="field"><strong>Телефон:</strong> <?= e($repair['client_phone']) ?></p>
+          </div>
+          <?php if ($qrSrc): ?>
+          <div class="qr-block">
+            <a href="<?= e($statusUrl) ?>" target="_blank" rel="noopener">
+              <img src="<?= e($qrSrc) ?>" width="90" height="90" alt="QR — статус заказа" title="Текущий статус: <?= e($repair['status']) ?>">
+            </a>
+            <div class="qr-caption">статус заказа</div>
+          </div>
+          <?php endif; ?>
+        </div>
 
-        <table class="head-table">
-          <tr>
-            <td class="label">Заказчик:</td>
-            <td><?= e($repair['client_name']) ?></td>
-            <td class="label">Телефон:</td>
-            <td><?= e($repair['client_phone']) ?></td>
-          </tr>
-        </table>
-
-        <table class="details-table">
-          <tr><td class="label">Марка/модель:</td><td><?= e($repair['device_type']) ?><?= $repair['device_model'] ? ' ' . e($repair['device_model']) : '' ?><?= $repair['device_serial'] ? ' (' . e($repair['device_serial']) . ')' : '' ?></td></tr>
-          <tr><td class="label">Комплектация:</td><td><?= e($repair['device_complete'] ?? '') ?: '—' ?></td></tr>
-          <tr><td class="label">Внешний вид:</td><td><?= e($repair['device_condition'] ?? '') ?: '—' ?></td></tr>
-          <tr><td class="label">Причина ремонта со слов заказчика:</td><td><?= nl2br(e($repair['problem_description'] ?? '')) ?: '—' ?></td></tr>
-          <tr><td class="label">Предоплата:</td><td><?= money((float) $repair['prepayment']) ?></td></tr>
-          <tr><td class="label">Ориентировочная стоимость ремонта:</td><td><?= money((float) $repair['price_estimate']) ?></td></tr>
-          <tr><td class="label">Ориентировочная дата готовности:</td><td><?= e($deadlineStr) ?></td></tr>
-          <tr><td class="label">Примечание:</td><td><?= nl2br(e($repair['receipt_note'] ?? '')) ?: '—' ?></td></tr>
-        </table>
+        <p class="field"><strong>Марка/модель:</strong> <?= e($repair['device_type']) ?><?= $repair['device_model'] ? ' ' . e($repair['device_model']) : '' ?><?= $repair['device_serial'] ? ' (' . e($repair['device_serial']) . ')' : '' ?></p>
+        <p class="field"><strong>Комплектация:</strong> <?= $repair['device_complete'] ? e($repair['device_complete']) : '' ?></p>
+        <p class="field"><strong>Внешний вид:</strong> <?= $repair['device_condition'] ? e($repair['device_condition']) : '' ?></p>
+        <p class="field"><strong>Причина ремонта со слов заказчика:</strong> <?= $repair['problem_description'] ? nl2br(e($repair['problem_description'])) : '' ?></p>
+        <p class="field"><strong>Предоплата:</strong> <?= $money2((float) $repair['prepayment']) ?></p>
+        <p class="field"><strong>Ориентировочная стоимость ремонта:</strong> <?= $money2((float) $repair['price_estimate']) ?></p>
+        <p class="field"><strong>Ориентировочная дата готовности:</strong> <?= $repair['deadline_date'] ? e($deadlineStr) : '' ?></p>
+        <p class="field"><strong>Примечание:</strong> <?= $repair['receipt_note'] ? nl2br(e($repair['receipt_note'])) : '' ?></p>
 
         <ol class="terms">
           <li>Технический центр не несёт ответственности за возможную потерю данных в памяти устройства, связанную с заменой плат, установкой программного обеспечения, заменой носителя информации.</li>
           <li>Заказчик принимает на себя риск возможной полной или частичной утраты работоспособности устройства в процессе ремонта (тепловой обработки), в случае грубых нарушений пользователем условий эксплуатации, наличий следов попадания токопроводящей жидкости (коррозии), либо механических повреждений.</li>
           <li>На восстановленные после попадания жидкости на устройство гарантия не распространяется и не продлевается.</li>
-          <li>Срок бесплатного хранения устройства составляет 30 дней с момента приёма его в ремонт. В случае, если по истечении указанного срока клиентом не заявлено требование о выдаче устройства, оно принимается на ответственное хранение. Стоимость услуг по ответственному хранению составляет ___ ₽ в сутки. Максимальный срок ответственного хранения составляет 30 дней. В случае, если в течение указанного срока Клиент не требует возврата устройства (либо с Клиентом не представляется возможным связаться по указанному в квитанции телефону), устройство утилизируется без компенсации его стоимости клиенту.</li>
+          <li>Срок бесплатного хранения устройства составляет 30 дней с момента приёма его в ремонт. В случае, если по истечении указанного срока клиентом не заявлено требование о выдаче устройства, оно принимается на ответственное хранение. Стоимость услуг по ответственному хранению составляет ___ руб в сутки. Максимальный срок ответственного хранения составляет 30 дней. В случае, если в течение указанного срока Клиент не требует возврата устройства (либо с Клиентом не представляется возможным связаться по указанному в квитанции телефону), устройство утилизируется без компенсации его стоимости клиенту.</li>
           <li>В случае отказа заказчика от ремонта устройства стоимость диагностики неисправности платная.</li>
           <li>В случае утери квитанции, устройство выдаётся по предъявлению паспорта на имя заказчика.</li>
         </ol>
 
-        <div class="sign-block">
-          <div>Исполнитель: ___________ / <?= e($repair['manager_name'] ?? '') ?> /</div>
-          <div>________________ / <?= e($repair['client_name']) ?> /</div>
-          <div class="sign-note">с условием гарантии ознакомлен и согласен</div>
+        <div class="sign-row">
+          <span>Исполнитель: ___________ / <?= e($repair['manager_name'] ?? '') ?>/</span>
+          <span>________________ / <?= e($repair['client_name']) ?>/</span>
         </div>
+        <div class="sign-note">с условием гарантии ознакомлен и согласен</div>
       </div>
       <?php if ($copy === 1): ?><div class="cut-line">✂ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─</div><?php endif;
     endfor;
@@ -137,24 +137,29 @@ if (!$showForm) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Квитанция <?= e($repair['order_no']) ?> — <?= e($repair['client_name']) ?></title>
 <style>
-  :root{ --navy:#152a4e; --navy-dark:#0e1e3a; --gold:#d4a63a; --bg:#f4f6fa; --border:#dde3ec; --text:#1c2436; --muted:#6b7385; }
+  :root{ --navy:#152a4e; --border:#dde3ec; --muted:#6b7385; }
   *{box-sizing:border-box;}
-  body{margin:0;font-family:"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);padding:24px;font-size:12.5px;}
-  .page{max-width:760px;margin:0 auto;background:#fff;border-radius:10px;box-shadow:0 2px 14px rgba(20,30,60,.08);padding:20px 26px;}
-  .copy{padding:6px 0;}
-  .copy-label{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);font-weight:700;margin-bottom:2px;}
-  h2{font-size:15px;color:var(--navy);margin:0 0 8px;}
-  table{width:100%;border-collapse:collapse;margin-bottom:6px;}
-  .head-table td{padding:2px 4px;vertical-align:top;}
-  .details-table td{padding:3px 4px;vertical-align:top;border-bottom:1px dotted var(--border);}
-  td.label{color:var(--muted);white-space:nowrap;width:1%;padding-right:8px;font-weight:600;}
-  .terms{margin:10px 0 12px;padding-left:16px;font-size:10.5px;color:var(--text);line-height:1.45;}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f6fa;color:#111;padding:24px;}
+  .page{max-width:780px;margin:0 auto;background:#fff;border-radius:10px;box-shadow:0 2px 14px rgba(20,30,60,.08);padding:26px 30px;}
+
+  /* Стиль печатной формы — под образец квитанции ЛайвСклад: чёрный текст,
+     без цветных акцентов, поля списком «жирная подпись: значение». */
+  .copy{padding:10px 0;font-size:13px;line-height:1.5;color:#111;}
+  .head-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
+  .head-fields{flex:1;}
+  .doc-title{font-size:19px;font-weight:700;margin:0 0 12px;color:#111;}
+  .field{margin:2px 0;}
+  .field strong{font-weight:700;}
+  .qr-block{text-align:center;flex-shrink:0;}
+  .qr-block img{display:block;border:1px solid var(--border);}
+  .qr-caption{font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:.3px;}
+  .terms{margin:14px 0 12px;padding-left:18px;font-size:11px;color:#222;line-height:1.5;}
   .terms li{margin-bottom:5px;}
-  .sign-block{font-size:12px;line-height:2;margin-top:6px;}
-  .sign-note{color:var(--muted);font-size:11px;}
-  .cut-line{text-align:center;color:var(--muted);font-size:11px;margin:14px 0;letter-spacing:1px;}
-  .actions{max-width:760px;margin:16px auto 0;display:flex;gap:10px;}
-  .btn{padding:10px 16px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:14px;text-decoration:none;color:var(--text);}
+  .sign-row{font-size:12.5px;margin-top:18px;display:flex;justify-content:space-between;gap:20px;}
+  .sign-note{color:#444;font-size:11.5px;text-align:right;margin-top:2px;}
+  .cut-line{text-align:center;color:var(--muted);font-size:11px;margin:16px 0;letter-spacing:1px;}
+  .actions{max-width:780px;margin:16px auto 0;display:flex;gap:10px;}
+  .btn{padding:10px 16px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:14px;text-decoration:none;color:#1c2436;}
   .btn-primary{background:var(--navy);color:#fff;border-color:var(--navy);}
   @media print{
     body{background:#fff;padding:0;}
