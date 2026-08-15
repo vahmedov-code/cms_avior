@@ -5,9 +5,12 @@ require_login();
 $pageTitle = 'Заказы';
 $activeNav = 'repairs';
 
-$statusFilter = get('status');
+$statusFilter = get('status'); // одно значение или несколько через запятую, напр. "диагностика,в ремонте"
 $typeFilter = get('type');
 $statuses = ['принят', 'диагностика', 'согласование', 'в ремонте', 'готов', 'выдан', 'отказ'];
+$statusFilterList = $statusFilter !== ''
+    ? array_values(array_intersect(explode(',', $statusFilter), $statuses))
+    : [];
 
 // Поиск: номер заказа, содержимое QR-кода с квитанции/статуса (там есть
 // order_no в ссылке) или клиент/телефон.
@@ -38,9 +41,12 @@ $sql = "SELECT r.*, c.full_name AS client_name, c.phone AS client_phone,
         FROM repairs r JOIN clients c ON c.id = r.client_id";
 $where = [];
 $params = [];
-if ($statusFilter !== '' && in_array($statusFilter, $statuses, true)) {
-    $where[] = 'r.status = ?';
-    $params[] = $statusFilter;
+if ($statusFilterList) {
+    $placeholders = implode(',', array_fill(0, count($statusFilterList), '?'));
+    $where[] = "r.status IN ($placeholders)";
+    foreach ($statusFilterList as $s) {
+        $params[] = $s;
+    }
 }
 if ($typeFilter !== '' && array_key_exists($typeFilter, order_types())) {
     $where[] = 'r.order_type = ?';

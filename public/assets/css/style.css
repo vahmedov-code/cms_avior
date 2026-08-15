@@ -271,6 +271,24 @@ tr[data-category="service"]{background:#fdf7e8;}
 .device-type-option input:focus-visible + .dt-chip{outline:2px solid var(--navy);outline-offset:1px;}
 .dt-icon{font-size:16px;line-height:1;}
 
+/* Счётчики заказов по статусу на панели — цветная полоска сверху под
+   существующую палитру .status-badge, кликабельные (ведут в repairs.php
+   с готовым фильтром, включая объединение нескольких статусов через
+   запятую — см. поддержку списка в repairs.php). */
+.pipeline{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px;}
+.pipeline-card{
+  display:block;background:#fff;border:1px solid var(--border);border-top:3px solid var(--border);
+  border-radius:8px;padding:14px 16px;text-decoration:none;color:inherit;transition:box-shadow .15s,transform .15s;
+}
+.pipeline-card:hover{box-shadow:0 4px 14px rgba(20,30,60,.08);transform:translateY(-1px);}
+.pipeline-card .pc-count{font-size:26px;font-weight:700;color:var(--navy);line-height:1.1;}
+.pipeline-card .pc-label{font-size:12px;color:var(--muted);margin-top:2px;}
+.pipeline-new{border-top-color:var(--navy);}
+.pipeline-progress{border-top-color:#1c5faa;}
+.pipeline-hold{border-top-color:#8a6d1f;}
+.pipeline-ready{border-top-color:var(--good);}
+.pipeline-issued{border-top-color:#8b93a1;}
+
 /* Печать карточки заказа */
 .print-only{display:none;}
 @media print{
