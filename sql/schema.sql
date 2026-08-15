@@ -133,6 +133,20 @@ CREATE TABLE IF NOT EXISTS sms_log (
     CONSTRAINT fk_sms_log_repair FOREIGN KEY (repair_id) REFERENCES repairs(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ---------------------------------------------------------------------
+-- Токены мобильного приложения (Android). Несколько токенов на юзера —
+-- по одному на устройство, можно отзывать по отдельности.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS api_tokens (
+    id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id       INT UNSIGNED NOT NULL,
+    token         CHAR(64) NOT NULL UNIQUE,
+    device_label  VARCHAR(150) NULL,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_used_at  DATETIME NULL,
+    CONSTRAINT fk_api_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- Примечание: администратора CMS создавать НЕ здесь.

@@ -110,6 +110,7 @@ ENUM: repair/pc_build/account_memo; +поля квитанции — см. ни�
 | `2026_08_15_add_client_source.sql` | `clients.source` | Применена (подтверждено Вейсом) |
 | `2026_08_15_finance_analytics.sql` | `repairs.order_type`, `repair_parts.cost`, таблица `expenses` | Дана инструкция, применение **не подтверждено явно** — уточнить у Вейса |
 | `2026_08_15_receipt_fields.sql` | Поля квитанции о приёмке (см. §6) | Применена (при повторном запуске MySQL вернул `Duplicate column name 'device_serial'` — это первая колонка из восьми в атомарном `ALTER TABLE`, значит весь набор уже на месте) |
+| `2026_08_15_api_tokens.sql` | Таблица `api_tokens` для мобильного приложения | Дана инструкция, **не применена** — новая |
 
 Если начинаете новую сессию и не уверены, что применено — попросите
 у Вейса вывод `DESCRIBE repairs;` и сверьте со `sql/schema.sql`.
@@ -152,6 +153,15 @@ ENUM: repair/pc_build/account_memo; +поля квитанции — см. ни�
   ремонт, прибыльность по типу устройства (нужна заполненная
   себестоимость в позициях заказа, иначе прибыль = выручке).
 - Публичный API статуса заказа (`public/api/status.php`).
+- **Мобильный API** (`public/api/mobile/*.php`) — для Android-приложения
+  (Вейс собирает его сам через Gemini в Android Studio). Токен-аутентификация
+  (таблица `api_tokens`, endpoint `auth.php`/`logout.php`), справочники
+  (`meta.php`), клиенты (`clients.php` — список/поиск/создание), заказы
+  (`orders.php` — список с фильтрами/деталь с позициями и историей/создание
+  ремонта), смена статуса (`update_status.php`). Полная спецификация +
+  готовый Kotlin/Retrofit-каркас для вставки в Android Studio — в
+  `docs/MOBILE_API.md`. Через API пока создаются только заказы типа
+  `repair` (не `pc_build`/`account_memo`).
 - Автономная офлайн-версия формы сметы (`public/smeta-sborka-pk.html`,
   localStorage + Google Sheets через Apps Script) — легаси, работает
   без входа в CMS, но её заказы НЕ попадают в общий список «Заказы».
@@ -162,6 +172,7 @@ ENUM: repair/pc_build/account_memo; +поля квитанции — см. ни�
 - [ ] Роли и права доступа (сейчас все авторизованные пользователи равны).
 - [ ] Виджет статуса ремонта на сайте avior.moscow (пример есть в `docs/status-widget-example.html`, не встроен на живой сайт).
 - [ ] Возможно: настраиваемая ставка ответственного хранения в квитанции (если Вейс попросит).
+- [ ] Мобильное приложение Android — API готов (`docs/MOBILE_API.md`), само приложение Вейс собирает через Gemini в Android Studio. Через API пока нельзя: создавать заказы pc_build/account_memo, управлять позициями заказа, отзывать чужие токены (только напрямую в БД).
 
 ## 6. Карта файлов
 
@@ -189,6 +200,9 @@ cms-avior/
     order_status.php           ← публичная HTML-страница статуса (цель QR-кода)
     finance.php / analytics.php
     api/status.php             ← публичный JSON-статус (для виджета на сайте)
+    api/mobile/                ← токен-API для Android-приложения (см. docs/MOBILE_API.md)
+      auth.php / logout.php
+      meta.php / clients.php / orders.php / update_status.php
     smeta-sborka-pk.html       ← легаси офлайн-смета
     assets/css/style.css
 ```
