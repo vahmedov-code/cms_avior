@@ -6,28 +6,33 @@
  * >5000₽/мес. Никакой абонентской платы, платите по факту отправленных
  * сообщений — подходит для разовых уведомлений по заказу.
  *
- * Включить:
+ * Включить (самый простой способ — прямо в интерфейсе):
  *  1. Зарегистрироваться на sms.ru, получить api_id (личный кабинет →
  *     Настройки → API).
- *  2. В config/config.php прописать:
- *       'sms' => ['provider' => 'smsru', 'api_key' => 'ВАШ_API_ID'],
- *  3. Всё — функция send_sms() сразу начнёт реально отправлять,
- *     менять код на страницах (repair_view.php и т.д.) не требуется.
+ *  2. Войти в CMS администратором → Настройки (settings.php) → вписать
+ *     провайдера и api_id, сохранить. Хранится в БД (таблица settings),
+ *     правка файлов на сервере не нужна.
  *
- * Если 'provider' не задан (null) — сообщение просто логируется в
+ * Запасной вариант (если таблица settings ещё не создана/недоступна) —
+ * старый способ через config/config.php:
+ *       'sms' => ['provider' => 'smsru', 'api_key' => 'ВАШ_API_ID'],
+ * get_setting() из settings.php имеет приоритет; если там пусто —
+ * используется значение из config.php.
+ *
+ * Если провайдер нигде не задан — сообщение просто логируется в
  * sms_log со статусом 'not_configured', ничего никуда не уходит
  * (безопасно для разработки/тестов).
  */
 
 function send_sms(string $phone, string $message, ?int $repairId = null): bool
 {
-    $sms = config()['sms'] ?? ['provider' => null];
-    $provider = $sms['provider'] ?? null;
+    $fallback = config()['sms'] ?? ['provider' => null, 'api_key' => ''];
+    $provider = get_setting('sms_provider') ?: ($fallback['provider'] ?? null);
+    $apiId = get_setting('sms_api_key') ?: ($fallback['api_key'] ?? '');
     $status = 'not_configured';
     $success = false;
 
     if ($provider === 'smsru') {
-        $apiId = $sms['api_key'] ?? '';
         if ($apiId !== '') {
             $url = 'https://sms.ru/sms/send?' . http_build_query([
                 'api_id' => $apiId,

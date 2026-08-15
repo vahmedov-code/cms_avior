@@ -32,6 +32,7 @@ $user = current_user();
       <a href="analytics.php" class="<?= $activeNav === 'analytics' ? 'active' : '' ?>">Аналитика</a>
       <?php if (is_admin()): ?>
         <a href="employees.php" class="<?= $activeNav === 'employees' ? 'active' : '' ?>">Сотрудники</a>
+        <a href="settings.php" class="<?= $activeNav === 'settings' ? 'active' : '' ?>">Настройки</a>
       <?php endif; ?>
     </nav>
     <div class="header-user">

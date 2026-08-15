@@ -121,6 +121,16 @@ CREATE TABLE IF NOT EXISTS device_model_catalog (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------
+-- Настройки, редактируемые через интерфейс (settings.php, только admin):
+-- реквизиты компании, site_url, SMS-провайдер/ключ. Задел под white-label.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS settings (
+    `key`      VARCHAR(100) NOT NULL PRIMARY KEY,
+    value      TEXT NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------
 -- История изменений статуса заказа
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS repair_status_log (

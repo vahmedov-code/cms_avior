@@ -97,14 +97,56 @@ function order_type_label(?string $key): string
 }
 
 /**
+ * Настройки, редактируемые через интерфейс (см. settings.php, только
+ * администратор) — хранятся в БД, а не в файлах на сервере. Это задел
+ * под white-label: чтобы развернуть CMS для другого клиента, не нужно
+ * лезть в код/конфиг руками — только заполнить форму настроек один раз.
+ *
+ * Graceful-деградация: если таблица settings ещё не создана (миграция
+ * не применена) — get_setting() тихо возвращает $default вместо падения
+ * с ошибкой SQL. Так старые страницы (квитанция, SMS и т.д.) продолжают
+ * работать как раньше даже без миграции — в отличие от, например,
+ * device_model_catalog, тут нет жёсткой зависимости.
+ */
+function get_setting(string $key, ?string $default = null): ?string
+{
+    static $cache = [];
+    if (array_key_exists($key, $cache)) {
+        return $cache[$key];
+    }
+    try {
+        $stmt = db()->prepare('SELECT value FROM settings WHERE `key` = ? LIMIT 1');
+        $stmt->execute([$key]);
+        $row = $stmt->fetch();
+        $value = ($row && $row['value'] !== '') ? $row['value'] : $default;
+    } catch (PDOException $e) {
+        $value = $default;
+    }
+    $cache[$key] = $value;
+    return $value;
+}
+
+/** @throws PDOException если таблица settings не создана — ловите на странице настроек. */
+function set_setting(string $key, string $value): void
+{
+    $stmt = db()->prepare(
+        'INSERT INTO settings (`key`, value) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE value = VALUES(value)'
+    );
+    $stmt->execute([$key, $value]);
+}
+
+/**
  * Реквизиты сервиса — используются в печатных формах (квитанция, памятка и т.д.).
+ * Значения по умолчанию — текущие реквизиты АВИОР (пока настройки не заполнены
+ * через settings.php, ничего не меняется по сравнению с тем, как было раньше).
  */
 function company_info(): array
 {
     return [
-        'name'    => 'АВИОР',
-        'address' => 'Можайское шоссе, 4к1, Москва',
-        'phone'   => '+7 (901) 222-81-11',
+        'name'    => get_setting('company_name', 'АВИОР'),
+        'address' => get_setting('company_address', 'Можайское шоссе, 4к1, Москва'),
+        'phone'   => get_setting('company_phone', '+7 (901) 222-81-11'),
     ];
 }
 
@@ -260,7 +302,7 @@ function build_share_links(string $publicUrl, string $message, string $subject, 
  */
 function public_site_url(string $path): ?string
 {
-    $siteUrl = rtrim((string) (config()['site_url'] ?? ''), '/');
+    $siteUrl = rtrim((string) (get_setting('site_url') ?? (config()['site_url'] ?? '')), '/');
     if ($siteUrl === '' || strpos($siteUrl, 'example.ru') !== false) {
         return null;
     }

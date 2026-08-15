@@ -66,6 +66,13 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="module-desc">Добавление и удаление учётных записей, роли, сброс паролей.</div>
     <div class="module-arrow">Открыть →</div>
   </a>
+
+  <a class="module-card active" href="settings.php">
+    <div class="module-icon">🛠️</div>
+    <div class="module-title">Настройки</div>
+    <div class="module-desc">Реквизиты компании, site_url, SMS-провайдер — без правки файлов на сервере.</div>
+    <div class="module-arrow">Открыть →</div>
+  </a>
   <?php endif; ?>
 
   <a class="module-card active" href="profile.php">
