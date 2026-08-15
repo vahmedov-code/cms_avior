@@ -98,8 +98,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'send_sms') {
         $message = post('message');
         if ($message !== '') {
-            $ok = send_sms($repair['client_phone'], $message, $id);
-            flash_set($ok ? 'SMS отправлено.' : 'SMS-провайдер не настроен — сообщение сохранено в журнал, но не отправлено. Настройте провайдера в config/config.php.', $ok ? 'success' : 'error');
+            $smsError = null;
+            $ok = send_sms($repair['client_phone'], $message, $id, $smsError);
+            if ($ok) {
+                flash_set('SMS отправлено.', 'success');
+            } elseif ($smsError) {
+                flash_set('SMS не отправлено: ' . $smsError, 'error');
+            } else {
+                flash_set('SMS-провайдер не настроен — сообщение сохранено в журнал, но не отправлено. Настройте провайдера в Настройках (settings.php) или config/config.php.', 'error');
+            }
         }
         redirect('repair_view.php?id=' . $id);
     }
