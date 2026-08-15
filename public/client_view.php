@@ -13,8 +13,9 @@ if (!$client) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'update') {
+    $source = post('source');
     $stmt = db()->prepare(
-        'UPDATE clients SET full_name = ?, phone = ?, email = ?, address = ?, notes = ? WHERE id = ?'
+        'UPDATE clients SET full_name = ?, phone = ?, email = ?, address = ?, notes = ?, source = ? WHERE id = ?'
     );
     $stmt->execute([
         post('full_name'),
@@ -22,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'update') {
         post('email') ?: null,
         post('address') ?: null,
         post('notes') ?: null,
+        array_key_exists($source, client_sources()) ? $source : null,
         $id,
     ]);
     flash_set('Данные клиента обновлены.', 'success');
@@ -55,6 +57,14 @@ require __DIR__ . '/../src/layout_header.php';
   </label>
   <label class="field full">Адрес
     <input type="text" name="address" value="<?= e($client['address'] ?? '') ?>">
+  </label>
+  <label class="field">Источник
+    <select name="source">
+      <option value="">— не указан —</option>
+      <?php foreach (client_sources() as $key => $label): ?>
+        <option value="<?= e($key) ?>" <?= ($client['source'] ?? '') === $key ? 'selected' : '' ?>><?= e($label) ?></option>
+      <?php endforeach; ?>
+    </select>
   </label>
   <label class="field full">Заметки
     <textarea name="notes" rows="3"><?= e($client['notes'] ?? '') ?></textarea>

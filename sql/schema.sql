@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS clients (
     email       VARCHAR(150) NULL,
     address     VARCHAR(255) NULL,
     notes       TEXT NULL,
+    source      ENUM('avito', 'yandex', '2gis', 'google_maps', 'referral', 'walkin') NULL,
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_clients_phone (phone)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -54,3 +54,27 @@ function next_order_no(): string
     $count = (int) $stmt->fetch()['c'] + 1;
     return sprintf('%s-%03d', $yy, $count);
 }
+
+/**
+ * Источники, откуда пришёл клиент — для формы клиента и статистики.
+ * Ключ — значение в БД (ENUM), значение — подпись в интерфейсе.
+ */
+function client_sources(): array
+{
+    return [
+        'avito'       => 'Авито',
+        'yandex'      => 'Яндекс',
+        '2gis'        => '2ГИС',
+        'google_maps' => 'Google Карты',
+        'referral'    => 'Сарафанное радио',
+        'walkin'      => 'С улицы',
+    ];
+}
+
+function client_source_label(?string $key): string
+{
+    if ($key === null || $key === '') {
+        return '—';
+    }
+    return client_sources()[$key] ?? $key;
+}

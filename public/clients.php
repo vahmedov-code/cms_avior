@@ -10,14 +10,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'create') {
     $phone = post('phone');
     $email = post('email');
     $address = post('address');
+    $source = post('source');
 
     if ($fullName === '' || $phone === '') {
         flash_set('Укажите имя и телефон клиента.', 'error');
     } else {
         $stmt = db()->prepare(
-            'INSERT INTO clients (full_name, phone, email, address) VALUES (?, ?, ?, ?)'
+            'INSERT INTO clients (full_name, phone, email, address, source) VALUES (?, ?, ?, ?, ?)'
         );
-        $stmt->execute([$fullName, $phone, $email ?: null, $address ?: null]);
+        $stmt->execute([$fullName, $phone, $email ?: null, $address ?: null, array_key_exists($source, client_sources()) ? $source : null]);
         flash_set('Клиент добавлен.', 'success');
     }
     redirect('clients.php');
@@ -62,6 +63,14 @@ require __DIR__ . '/../src/layout_header.php';
     <label class="field full">Адрес
       <input type="text" name="address">
     </label>
+    <label class="field full">Источник
+      <select name="source">
+        <option value="">— не указан —</option>
+        <?php foreach (client_sources() as $key => $label): ?>
+          <option value="<?= e($key) ?>"><?= e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </label>
     <div class="field full">
       <button type="submit" class="btn btn-primary">Сохранить клиента</button>
     </div>
@@ -74,6 +83,7 @@ require __DIR__ . '/../src/layout_header.php';
       <tr>
         <th>Клиент</th>
         <th>Телефон</th>
+        <th>Источник</th>
         <th>Email</th>
         <th>В базе с</th>
         <th></th>
@@ -81,12 +91,13 @@ require __DIR__ . '/../src/layout_header.php';
     </thead>
     <tbody>
       <?php if (!$clients): ?>
-        <tr><td colspan="5" style="text-align:center;color:var(--muted);">Клиентов пока нет.</td></tr>
+        <tr><td colspan="6" style="text-align:center;color:var(--muted);">Клиентов пока нет.</td></tr>
       <?php endif; ?>
       <?php foreach ($clients as $c): ?>
         <tr>
           <td data-label="Клиент"><a href="client_view.php?id=<?= (int) $c['id'] ?>"><?= e($c['full_name']) ?></a></td>
           <td data-label="Телефон"><?= e($c['phone']) ?></td>
+          <td data-label="Источник"><?= e(client_source_label($c['source'] ?? null)) ?></td>
           <td data-label="Email"><?= e($c['email'] ?? '—') ?></td>
           <td data-label="В базе с"><?= date('d.m.Y', strtotime($c['created_at'])) ?></td>
           <td data-label=""><a href="client_view.php?id=<?= (int) $c['id'] ?>" class="btn btn-sm">Открыть</a></td>

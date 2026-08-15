@@ -20,11 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$error && $clientMode === 'new') {
         $newName = post('new_client_name');
         $newPhone = post('new_client_phone');
+        $newSource = post('new_client_source');
         if ($newName === '' || $newPhone === '') {
             $error = 'Укажите имя и телефон нового клиента.';
         } else {
-            $stmt = db()->prepare('INSERT INTO clients (full_name, phone) VALUES (?, ?)');
-            $stmt->execute([$newName, $newPhone]);
+            $stmt = db()->prepare('INSERT INTO clients (full_name, phone, source) VALUES (?, ?, ?)');
+            $stmt->execute([$newName, $newPhone, array_key_exists($newSource, client_sources()) ? $newSource : null]);
             $clientId = (int) db()->lastInsertId();
         }
     } elseif (!$error) {
@@ -94,6 +95,14 @@ require __DIR__ . '/../src/layout_header.php';
     </label>
     <label class="field">Телефон
       <input type="text" name="new_client_phone" placeholder="+7 ...">
+    </label>
+    <label class="field full">Источник
+      <select name="new_client_source">
+        <option value="">— не указан —</option>
+        <?php foreach (client_sources() as $key => $label): ?>
+          <option value="<?= e($key) ?>"><?= e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
     </label>
   </div>
 
