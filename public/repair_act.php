@@ -11,7 +11,9 @@ require_login();
 $id = (int) get('id');
 
 $stmt = db()->prepare(
-    'SELECT r.*, c.full_name AS client_name, c.phone AS client_phone
+    'SELECT r.*, c.full_name AS client_name, c.phone AS client_phone,
+                c.client_type AS client_type, c.contact_person AS client_contact_person,
+                c.inn AS client_inn, c.kpp AS client_kpp
      FROM repairs r JOIN clients c ON c.id = r.client_id
      WHERE r.id = ?'
 );

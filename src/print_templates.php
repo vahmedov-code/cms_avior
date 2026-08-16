@@ -33,16 +33,18 @@ function render_receipt_page(array $repair, bool $publicMode = false): string
         null
     ) : null;
 
+    $clientLine = client_display_line($repair);
+
     ob_start();
     for ($copy = 1; $copy <= 2; $copy++): ?>
       <div class="copy">
         <div class="head-row">
           <div class="head-fields">
             <h1 class="doc-title">Квитанция № <?= e($repair['order_no']) ?> от <?= e($docDate) ?></h1>
-            <p class="field"><strong>Исполнитель:</strong> <?= e($company['name']) ?></p>
+            <p class="field"><strong>Исполнитель:</strong> <?= e($company['executor_name']) ?></p>
             <p class="field"><strong>Адрес:</strong> <?= e($company['address']) ?></p>
             <p class="field"><strong>Телефон:</strong> <?= e($company['phone']) ?></p>
-            <p class="field"><strong>Заказчик:</strong> <?= e($repair['client_name']) ?></p>
+            <p class="field"><strong>Заказчик:</strong> <?= $clientLine ?></p>
             <p class="field"><strong>Телефон:</strong> <?= e($repair['client_phone']) ?></p>
           </div>
           <?php if ($qrSrc): ?>
@@ -118,15 +120,17 @@ function render_act_page(array $repair, array $parts, bool $publicMode = false):
         null
     ) : null;
 
+    $clientLine = client_display_line($repair);
+
     ob_start(); ?>
       <div class="copy">
         <div class="head-row">
           <div class="head-fields">
             <h1 class="doc-title">Акт сдачи-приёмки выполненных работ (оказанных услуг)<br>№ <?= e($repair['order_no']) ?> от <?= e($docDate) ?></h1>
-            <p class="field"><strong>Исполнитель:</strong> <?= e($company['name']) ?></p>
+            <p class="field"><strong>Исполнитель:</strong> <?= e($company['executor_name']) ?></p>
             <p class="field"><strong>Адрес:</strong> <?= e($company['address']) ?></p>
             <p class="field"><strong>Телефон:</strong> <?= e($company['phone']) ?></p>
-            <p class="field"><strong>Заказчик:</strong> <?= e($repair['client_name']) ?></p>
+            <p class="field"><strong>Заказчик:</strong> <?= $clientLine ?></p>
             <p class="field"><strong>Устройство:</strong> <?= e($repair['device_type']) ?><?= $repair['device_model'] ? ' ' . e($repair['device_model']) : '' ?><?= $repair['device_serial'] ? ' (' . e($repair['device_serial']) . ')' : '' ?></p>
           </div>
           <?php if ($qrSrc): ?>
@@ -191,6 +195,116 @@ function render_act_page(array $repair, array $parts, bool $publicMode = false):
  * Общая HTML-обёртка печатного документа (шрифты/размеры под образец
  * LiveSklad, который прислал Вейс) — используется и квитанцией, и актом.
  */
+/**
+ * Счёт на оплату — только для клиентов-юрлиц (безналичная оплата по
+ * реквизитам). По образцу, который прислал Вейс (Счета.pdf): банковский
+ * блок получателя сверху, Поставщик/Покупатель с ИНН/КПП, таблица позиций
+ * со скидкой (по позициям скидка не ведётся — всегда 0.00, как и в акте),
+ * «Без НДС» (ИП/ООО на упрощёнке/патенте), сумма прописью.
+ *
+ * Номер счёта — тот же order_no заказа (не отдельная нумерация): проще
+ * и без риска коллизий, которые уже ловили на генераторе номеров заказов.
+ */
+function render_invoice_page(array $repair, array $parts, bool $publicMode = false): string
+{
+    $id = (int) $repair['id'];
+    $company = company_info();
+    $docDate = date('d.m.Y');
+
+    $partsTotal = 0.0;
+    foreach ($parts as $p) {
+        $partsTotal += (float) $p['qty'] * (float) $p['price'];
+    }
+    $discount = 0.0;
+    $total = $partsTotal - $discount;
+
+    $clientLine = client_display_line($repair);
+    $bankInnKpp = trim($company['inn'] . ($company['kpp'] !== '' ? ' / ' . $company['kpp'] : ''));
+
+    $publicUrl = !empty($repair['public_token'])
+        ? public_site_url('invoice_public.php?id=' . $id . '&token=' . urlencode($repair['public_token']))
+        : null;
+    $shareLinks = ($publicUrl && !$publicMode) ? build_share_links(
+        $publicUrl,
+        'Здравствуйте, ' . $repair['client_name'] . '! Счёт на оплату по заказу ' . $repair['order_no'] . ':',
+        'Счёт на оплату ' . $repair['order_no'] . ' — ' . $company['name'],
+        $repair['client_phone'],
+        null
+    ) : null;
+
+    ob_start(); ?>
+      <div class="copy">
+        <table class="bank-details">
+          <tr>
+            <td class="label" rowspan="2">Банк получателя</td>
+            <td class="value" rowspan="2"><?= e($company['bank_name']) ?></td>
+            <td class="label">БИК</td>
+            <td class="value"><?= e($company['bank_bik']) ?></td>
+          </tr>
+          <tr>
+            <td class="label">Сч. №</td>
+            <td class="value"><?= e($company['bank_corr_account']) ?></td>
+          </tr>
+          <tr>
+            <td class="label" rowspan="2">Получатель</td>
+            <td class="value" rowspan="2"><?= e($company['executor_name']) ?></td>
+            <td class="label">ИНН/КПП</td>
+            <td class="value"><?= e($bankInnKpp) ?></td>
+          </tr>
+          <tr>
+            <td class="label">Сч. №</td>
+            <td class="value"><?= e($company['bank_account']) ?></td>
+          </tr>
+        </table>
+
+        <h1 class="doc-title" style="margin-top:16px;">Счёт на оплату № <?= e($repair['order_no']) ?> от <?= e($docDate) ?></h1>
+        <p class="field"><strong>Поставщик:</strong> <?= e($company['executor_name']) ?> ИНН <?= e($company['inn']) ?></p>
+        <p class="field"><strong>Покупатель:</strong> <?= $clientLine ?></p>
+
+        <table class="items-table">
+          <thead>
+            <tr><th>№</th><th>Товары (работы, услуги)</th><th>Кол-во</th><th>Ед.</th><th>Цена</th><th>Скидка</th><th>Сумма</th></tr>
+          </thead>
+          <tbody>
+            <?php if (!$parts): ?>
+              <tr><td colspan="7" style="text-align:center;color:#666;">Позиции не добавлены</td></tr>
+            <?php endif; ?>
+            <?php foreach ($parts as $i => $p): ?>
+              <tr>
+                <td><?= (int) $i + 1 ?></td>
+                <td><?= e($p['name']) ?></td>
+                <td><?= rtrim(rtrim((string) (float) $p['qty'], '0'), '.') ?></td>
+                <td>шт.</td>
+                <td><?= money_plain((float) $p['price']) ?></td>
+                <td><?= money_plain(0) ?></td>
+                <td><?= money_plain((float) $p['qty'] * (float) $p['price']) ?></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+
+        <table class="totals-table">
+          <tr><td class="label">Итого без учёта скидки:</td><td><?= money_plain($partsTotal) ?></td></tr>
+          <tr><td class="label">Сумма скидки:</td><td><?= money_plain($discount) ?></td></tr>
+          <tr><td class="label"><strong>Итого к оплате:</strong></td><td><strong><?= money_plain($total) ?></strong></td></tr>
+          <tr><td class="label">В том числе НДС:</td><td>Без НДС</td></tr>
+        </table>
+
+        <p class="field sum-words">Всего к оплате: <?= e(money_in_words_rub($total)) ?></p>
+
+        <div class="sign-row" style="margin-top:28px;">
+          <span>Поставщик ___________________ (подпись) ___________________ (расшифровка подписи)</span>
+        </div>
+      </div>
+    <?php
+    $copyHtml = ob_get_clean();
+
+    $title = 'Счёт на оплату ' . $repair['order_no'] . ' — ' . $repair['client_name'];
+    $cmsUrl = 'repair_view.php?id=' . $id;
+
+    return render_print_document_shell($title, $copyHtml, $publicMode, null, $cmsUrl, $shareLinks, true);
+}
+
 function render_print_document_shell(
     string $title,
     string $bodyHtml,
@@ -245,6 +359,11 @@ function render_print_document_shell(
   .totals-table td:last-child{text-align:right;min-width:100px;}
 
   .sum-words{font-weight:700;}
+
+  .bank-details{border-collapse:collapse;font-size:11.5px;margin-bottom:6px;}
+  .bank-details td{border:1px solid #999;padding:3px 8px;}
+  .bank-details td.label{background:#f2f2f2;color:#444;white-space:nowrap;}
+  .bank-details td.value{font-weight:700;}
 
   .actions{max-width:780px;margin:16px auto 0;display:flex;gap:10px;flex-wrap:wrap;}
   .btn{padding:10px 16px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:14px;text-decoration:none;color:#1c2436;}

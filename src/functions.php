@@ -194,16 +194,58 @@ function set_setting(string $key, string $value): void
 }
 
 /**
+ * Строка «Заказчик» для печатных документов — для юрлиц добавляет
+ * ИНН/КПП рядом с названием (по образцу счёта, который прислал Вейс:
+ * «Покупатель: ООО Кибер Юниэн, ИНН 9718250074, КПП 771801001»), для
+ * физлиц — просто ФИО, как и было раньше. Ожидает в $repair алиасы
+ * client_name/client_type/client_inn/client_kpp (см. JOIN в repair_act.php
+ * и др. — c.client_type AS client_type, c.inn AS client_inn, c.kpp AS client_kpp).
+ * Возвращает готовый HTML (уже экранированный), не сырой текст.
+ */
+function client_display_line(array $repair): string
+{
+    $name = e($repair['client_name']);
+    if (($repair['client_type'] ?? 'individual') !== 'legal_entity') {
+        return $name;
+    }
+    $bits = [$name];
+    if (!empty($repair['client_inn'])) {
+        $bits[] = 'ИНН ' . e($repair['client_inn']);
+    }
+    if (!empty($repair['client_kpp'])) {
+        $bits[] = 'КПП ' . e($repair['client_kpp']);
+    }
+    return implode(', ', $bits);
+}
+
+/**
  * Реквизиты сервиса — используются в печатных формах (квитанция, памятка и т.д.).
  * Значения по умолчанию — текущие реквизиты АВИОР (пока настройки не заполнены
  * через settings.php, ничего не меняется по сравнению с тем, как было раньше).
+ *
+ * executor_name — то, что должно стоять в печатных документах в строке
+ * «Исполнитель» (юрлицо, не бренд-название) — по образцу, который прислал
+ * Вейс (акт.pdf): «Исполнитель: ООО Мастер», а не «Исполнитель: АВИОР».
+ * Откат на name, если legal_name ещё не заполнен в Настройках — чтобы
+ * документы не остались без исполнителя, пока юрреквизиты не внесены.
  */
 function company_info(): array
 {
+    $name = get_setting('company_name', 'АВИОР');
+    $legalName = get_setting('legal_name', '');
     return [
-        'name'    => get_setting('company_name', 'АВИОР'),
-        'address' => get_setting('company_address', 'Можайское шоссе, 4к1, Москва'),
-        'phone'   => get_setting('company_phone', '+7 (901) 222-81-11'),
+        'name'              => $name,
+        'legal_name'        => $legalName,
+        'executor_name'     => $legalName !== '' ? $legalName : $name,
+        'address'           => get_setting('company_address', 'Можайское шоссе, 4к1, Москва'),
+        'phone'             => get_setting('company_phone', '+7 (901) 222-81-11'),
+        'inn'               => get_setting('legal_inn', ''),
+        'kpp'               => get_setting('legal_kpp', ''),
+        'ogrn'              => get_setting('legal_ogrn', ''),
+        'bank_name'         => get_setting('bank_name', ''),
+        'bank_account'      => get_setting('bank_account', ''),
+        'bank_bik'          => get_setting('bank_bik', ''),
+        'bank_corr_account' => get_setting('bank_corr_account', ''),
     ];
 }
 

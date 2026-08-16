@@ -9,7 +9,7 @@ $id = (int) get('id');
 function load_repair(int $id): ?array
 {
     $stmt = db()->prepare(
-        'SELECT r.*, c.full_name AS client_name, c.phone AS client_phone
+        'SELECT r.*, c.full_name AS client_name, c.phone AS client_phone, c.client_type AS client_type
          FROM repairs r JOIN clients c ON c.id = r.client_id
          WHERE r.id = ?'
     );
@@ -149,6 +149,9 @@ require __DIR__ . '/../src/layout_header.php';
       <option value="">📄 Печатные документы...</option>
       <option value="repair_receipt.php?id=<?= (int) $id ?>">Квитанция о приёмке</option>
       <option value="repair_act.php?id=<?= (int) $id ?>">Акт выполненных работ</option>
+      <?php if (($repair['client_type'] ?? 'individual') === 'legal_entity'): ?>
+        <option value="invoice.php?id=<?= (int) $id ?>">Счёт на оплату</option>
+      <?php endif; ?>
     </select>
     <?php if (is_admin()): ?>
       <form method="post" class="no-print" style="display:inline;" onsubmit="return confirm('Удалить заказ «<?= e($repair['order_no']) ?>» безвозвратно? Все его позиции, история статусов и печатные документы удалятся вместе с ним. Отменить нельзя.');">
