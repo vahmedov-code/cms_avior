@@ -96,7 +96,7 @@ require __DIR__ . '/../src/layout_header.php';
   Источники клиентов показаны за всё время — это база, а не срез по датам.
 </p>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;margin-bottom:28px;">
+<div class="finance-grid" style="margin-bottom:28px;">
   <div>
     <h3 style="color:var(--navy);font-size:16px;">Откуда приходят клиенты</h3>
     <div class="table-card">
@@ -140,9 +140,7 @@ require __DIR__ . '/../src/layout_header.php';
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
-  <div>
-    <h3 style="color:var(--navy);font-size:16px;">Что чаще несут в ремонт</h3>
+<div class="finance-grid">
     <div class="table-card">
       <table>
         <thead><tr><th>Устройство</th><th>Заказов</th><th>Доля</th></tr></thead>

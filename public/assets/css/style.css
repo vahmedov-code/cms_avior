@@ -251,6 +251,12 @@ tr[data-category="service"]{background:#fdf7e8;}
    не схлопывались и боковая панель наезжала на основной контент. */
 .repair-detail-grid{display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start;}
 
+/* Обычная равная двухколоночная сетка — Финансы/Аналитика/Профиль.
+   Та же история, что была с repair-detail-grid: раньше это был инлайн-
+   стиль без медиа-запроса, на мобильном колонки не схлопывались и
+   контент наезжал друг на друга. */
+.finance-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
+
 /* Подсказки автозаполнения — кликабельные кнопки над textarea (там, где
    нативный <datalist> не работает), значения берутся из истории заказов. */
 .chip-suggestions{display:flex;flex-wrap:wrap;gap:6px;margin:-8px 0 12px;}
@@ -327,6 +333,7 @@ tr[data-category="service"]{background:#fdf7e8;}
   .content{padding:18px;}
   .form-grid{grid-template-columns:1fr;}
   .repair-detail-grid{grid-template-columns:1fr;gap:18px;}
+  .finance-grid{grid-template-columns:1fr;gap:18px;}
   table, thead, tbody, tr, td{display:block;width:100%;}
   thead{display:none;}
   tbody tr{border:1px solid var(--border);border-radius:8px;margin-bottom:10px;padding:8px 12px;}

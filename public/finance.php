@@ -132,7 +132,7 @@ require __DIR__ . '/../src/layout_header.php';
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+<div class="finance-grid">
   <div>
     <h3 style="color:var(--navy);font-size:16px;">Выручка по типу заказа</h3>
     <div class="table-card" style="margin-bottom:28px;">

@@ -62,7 +62,7 @@ require __DIR__ . '/../src/layout_header.php';
   <div class="flash flash-error"><?= e($error) ?></div>
 <?php endif; ?>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:820px;align-items:start;">
+<div class="finance-grid" style="max-width:820px;">
   <div class="table-card" style="padding:16px;">
     <h3 style="margin:0 0 12px;font-size:15px;color:var(--navy);">Данные учётной записи</h3>
     <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">Логин: <strong><?= e($me['username']) ?></strong> · роль: <?= $me['role'] === 'admin' ? 'администратор' : 'сотрудник' ?></p>
