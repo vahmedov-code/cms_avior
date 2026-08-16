@@ -37,7 +37,7 @@ function render_receipt_page(array $repair, bool $publicMode = false): string
 
     ob_start();
     for ($copy = 1; $copy <= 2; $copy++): ?>
-      <div class="copy">
+      <div class="copy copy--half">
         <div class="head-row">
           <div class="head-fields">
             <h1 class="doc-title">Квитанция № <?= e($repair['order_no']) ?> от <?= e($docDate) ?></h1>
@@ -123,7 +123,7 @@ function render_act_page(array $repair, array $parts, bool $publicMode = false):
     $clientLine = client_display_line($repair);
 
     ob_start(); ?>
-      <div class="copy">
+      <div class="copy copy--full">
         <div class="head-row">
           <div class="head-fields">
             <h1 class="doc-title">Акт сдачи-приёмки выполненных работ (оказанных услуг)<br>№ <?= e($repair['order_no']) ?> от <?= e($docDate) ?></h1>
@@ -176,7 +176,7 @@ function render_act_page(array $repair, array $parts, bool $publicMode = false):
         <p class="field" style="margin-top:14px;"><strong>Вердикт:</strong></p>
         <p class="field">Вышеперечисленные услуги выполнены полностью и в срок. Заказчик претензий по объёму, качеству и срокам оказания услуг не имеет.</p>
 
-        <div class="sign-row" style="margin-top:24px;">
+        <div class="sign-row">
           <span>Исполнитель: ___________ / <?= e($repair['manager_name'] ?? '') ?>/</span>
           <span>________________ / <?= e($repair['client_name']) ?>/</span>
         </div>
@@ -233,7 +233,7 @@ function render_invoice_page(array $repair, array $parts, bool $publicMode = fal
     ) : null;
 
     ob_start(); ?>
-      <div class="copy">
+      <div class="copy copy--full">
         <table class="bank-details">
           <tr>
             <td class="label" rowspan="2">Банк получателя</td>
@@ -292,7 +292,7 @@ function render_invoice_page(array $repair, array $parts, bool $publicMode = fal
 
         <p class="field sum-words">Всего к оплате: <?= e(money_in_words_rub($total)) ?></p>
 
-        <div class="sign-row" style="margin-top:28px;">
+        <div class="sign-row">
           <span>Поставщик ___________________ (подпись) ___________________ (расшифровка подписи)</span>
         </div>
       </div>
@@ -341,7 +341,15 @@ function render_print_document_shell(
 
   /* Стиль печатной формы — под образцы квитанции/акта ЛайвСклад: чёрный
      текст, без цветных акцентов, поля списком «жирная подпись: значение». */
-  .copy{padding:10px 0;font-size:13px;line-height:1.5;color:#111;}
+  .copy{padding:10px 0;font-size:13px;line-height:1.5;color:#111;display:flex;flex-direction:column;}
+  /* Половина листа (квитанция — 2 экземпляра на странице) и полная
+     страница (акт/счёт — 1 экземпляр) — разная минимальная высота,
+     чтобы блок подписи прижимался к низу именно СВОЕЙ половины/страницы,
+     а не всего документа. Значения приблизительные под A4 с дефолтными
+     полями браузера при печати — если на реальном принтере окажется
+     чуть не то, поправить будет одна строка. */
+  .copy--half{min-height:120mm;}
+  .copy--full{min-height:235mm;}
   .head-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
   .head-fields{flex:1;}
   .doc-title{font-size:19px;font-weight:700;margin:0 0 12px;color:#111;line-height:1.3;}
@@ -352,7 +360,7 @@ function render_print_document_shell(
   .qr-caption{font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:.3px;}
   .terms{margin:14px 0 12px;padding-left:18px;font-size:11px;color:#222;line-height:1.5;}
   .terms li{margin-bottom:5px;}
-  .sign-row{font-size:12.5px;margin-top:18px;display:flex;justify-content:space-between;gap:20px;}
+  .sign-row{font-size:12.5px;margin-top:auto;padding-top:18px;display:flex;justify-content:space-between;gap:20px;}
   .sign-note{color:#444;font-size:11.5px;text-align:right;margin-top:2px;}
   .cut-line{text-align:center;color:var(--muted);font-size:11px;margin:16px 0;letter-spacing:1px;}
 
@@ -394,6 +402,9 @@ function render_print_document_shell(
 <div class="actions">
   <button class="btn btn-primary" onclick="window.print()">🖨 Печать</button>
   <button class="btn" id="pdfBtn" onclick="<?= e('downloadDocPdf(this, ' . json_encode($pdfFileName) . ')') ?>">⬇️ Скачать PDF</button>
+  <?php if (!$publicMode): ?>
+    <a class="btn" href="index.php">🏠 Домой</a>
+  <?php endif; ?>
 </div>
 <script>
 /**
