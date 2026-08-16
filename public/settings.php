@@ -51,6 +51,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'bank_corr_account'    => trim(post('bank_corr_account')),
         'yandex_reviews_url'   => trim(post('yandex_reviews_url')),
         'bulk_sms_api_key'     => trim(post('bulk_sms_api_key')),
+        'kkm_server_url'       => rtrim(trim(post('kkm_server_url')), '/'),
+        'kkm_login'            => trim(post('kkm_login')),
+        'kkm_password'         => trim(post('kkm_password')),
+        'kkm_num_device'       => trim(post('kkm_num_device')),
     ];
     try {
         foreach ($pairs as $key => $value) {
@@ -88,6 +92,10 @@ $currentBankBik = get_setting('bank_bik') ?? '';
 $currentBankCorrAccount = get_setting('bank_corr_account') ?? '';
 $currentYandexReviewsUrl = get_setting('yandex_reviews_url') ?? '';
 $currentBulkSmsApiKey = get_setting('bulk_sms_api_key') ?? '';
+$currentKkmServerUrl = get_setting('kkm_server_url') ?? 'http://localhost:5893';
+$currentKkmLogin = get_setting('kkm_login') ?? 'User';
+$currentKkmPassword = get_setting('kkm_password') ?? '';
+$currentKkmNumDevice = get_setting('kkm_num_device') ?? '1';
 
 $pageTitle = 'Настройки';
 $activeNav = 'settings';
@@ -224,6 +232,29 @@ require __DIR__ . '/../src/layout_header.php';
   </p>
   <label class="field full">api_id (SMS.ru)
     <input type="text" name="bulk_sms_api_key" value="<?= e($currentBulkSmsApiKey) ?>">
+  </label>
+
+  <h3 style="grid-column:1/-1;color:var(--navy);font-size:15px;margin:20px 0 4px;">Касса АТОЛ (KkmServer)</h3>
+  <p style="grid-column:1/-1;font-size:12px;color:var(--muted);margin:-6px 0 0;">
+    Печать чеков идёт напрямую из браузера сотрудника на локальный
+    адрес KkmServer — работает только с того компьютера, где стоит
+    касса и запущен KkmServer. Логин/пароль — из вкладки KkmServer
+    (по умолчанию логин <code>User</code>, пароль пустой).
+    Если адрес по умолчанию (5893, обычный HTTP) не сработает из-за
+    блокировки браузером — попробуйте порт 5894 (<code>https://localhost:5894</code>),
+    там свой сертификат KkmServer, его нужно один раз принять в браузере.
+  </p>
+  <label class="field full">Адрес KkmServer
+    <input type="text" name="kkm_server_url" value="<?= e($currentKkmServerUrl) ?>" placeholder="http://localhost:5893">
+  </label>
+  <label class="field">Логин
+    <input type="text" name="kkm_login" value="<?= e($currentKkmLogin) ?>">
+  </label>
+  <label class="field">Пароль
+    <input type="text" name="kkm_password" value="<?= e($currentKkmPassword) ?>">
+  </label>
+  <label class="field">№ устройства (NumDevice)
+    <input type="text" name="kkm_num_device" value="<?= e($currentKkmNumDevice) ?>" style="max-width:100px;">
   </label>
 
   <div class="field full">

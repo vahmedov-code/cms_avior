@@ -35,6 +35,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('repairs.php');
     }
 
+    if ($action === 'save_manual_payment') {
+        $amount = (float) str_replace(',', '.', post('amount', '0'));
+        if ($amount > 0) {
+            $stmt = db()->prepare(
+                'INSERT INTO payments (repair_id, method, amount, receipt_printed, created_by) VALUES (?, ?, ?, 0, ?)'
+            );
+            $stmt->execute([$id, 'manual', $amount, current_user()['id'] ?? null]);
+            flash_set('Оплата сохранена (' . money($amount) . '), без печати чека.', 'success');
+        } else {
+            flash_set('Укажите сумму больше нуля.', 'error');
+        }
+        redirect('repair_view.php?id=' . $id);
+    }
+
     if ($action === 'update_status') {
         $newStatus = post('status');
         if (in_array($newStatus, $statuses, true) && $newStatus !== $repair['status']) {
@@ -307,6 +321,35 @@ require __DIR__ . '/../src/layout_header.php';
         <span>Прибыль по заказу:</span><strong><?= money($marginTotal) ?></strong>
       </div>
     </div>
+
+    <div class="table-card no-print" style="padding:16px;margin-top:20px;">
+      <h3 style="margin:0 0 10px;font-size:15px;color:var(--navy);">Оплата</h3>
+      <p style="font-size:12px;color:var(--muted);margin-top:-4px;">
+        Печать чека — напрямую из этого браузера через KkmServer.
+        Работает только с того компьютера, где физически стоит касса.
+      </p>
+      <div id="kkmStatus" style="display:none;font-size:13px;margin-bottom:10px;padding:8px 10px;border-radius:6px;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        <button type="button" class="btn btn-primary" id="payCashBtn" onclick="payAndPrint('cash', <?= (float) ($partsTotal + $servicesTotal) ?>, <?= (int) $id ?>)">💵 Оплата нал</button>
+        <button type="button" class="btn btn-primary" id="payCardBtn" onclick="payAndPrint('card', <?= (float) ($partsTotal + $servicesTotal) ?>, <?= (int) $id ?>)">💳 Безнал</button>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:-6px;margin-bottom:14px;">
+        «Безнал» печатает чек с пометкой «электронный платёж» — сама
+        оплата картой/СБП проводится на терминале Сбера отдельно,
+        нажимайте эту кнопку уже после успешной оплаты на терминале.
+      </p>
+
+      <form method="post" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:14px;">
+        <input type="hidden" name="action" value="save_manual_payment">
+        <label class="field" style="flex:1;min-width:120px;">Сумма
+          <input type="number" name="amount" min="0" step="1" value="<?= (float) ($partsTotal + $servicesTotal) ?>">
+        </label>
+        <button type="submit" class="btn">Сохранить без чека</button>
+      </form>
+      <p style="font-size:11px;color:var(--muted);margin-top:6px;">
+        Для случаев, когда деньги уже получены, а чек будет пробит отдельно.
+      </p>
+    </div>
   </div>
 
   <div>
@@ -374,5 +417,99 @@ require __DIR__ . '/../src/layout_header.php';
     </div>
   </div>
 </div>
+
+<script>
+/**
+ * Оплата и печать чека через KkmServer — запрос уходит прямо из этого
+ * браузера на localhost (сервер CRM физически не может достучаться до
+ * кассы в магазине). Работает только с того компьютера, где стоит АТОЛ
+ * и запущен KkmServer с этими логином/паролем.
+ */
+var KKM_URL = <?= json_encode(rtrim(get_setting('kkm_server_url', 'http://localhost:5893'), '/')) ?>;
+var KKM_LOGIN = <?= json_encode(get_setting('kkm_login', 'User')) ?>;
+var KKM_PASSWORD = <?= json_encode(get_setting('kkm_password', '')) ?>;
+var KKM_NUM_DEVICE = <?= json_encode((int) (get_setting('kkm_num_device', '1'))) ?>;
+
+var ORDER_CHECK_STRINGS = <?= json_encode(array_map(function ($p) {
+    return [
+        'Register' => [
+            'Name'     => $p['name'],
+            'Quantity' => (float) $p['qty'],
+            'Price'    => (float) $p['price'],
+            'Amount'   => (float) $p['qty'] * (float) $p['price'],
+            'Tax'      => 20,
+        ],
+    ];
+}, $parts), JSON_UNESCAPED_UNICODE) ?>;
+
+function showKkmStatus(text, isError) {
+  var el = document.getElementById('kkmStatus');
+  el.style.display = 'block';
+  el.style.background = isError ? '#fbe9e7' : '#e6f4ea';
+  el.style.color = isError ? 'var(--danger)' : 'var(--good)';
+  el.textContent = text;
+}
+
+function payAndPrint(method, amount, repairId) {
+  if (!ORDER_CHECK_STRINGS.length) {
+    showKkmStatus('В заказе нет ни одной позиции — нечего вносить в чек.', true);
+    return;
+  }
+  if (!KKM_URL) {
+    showKkmStatus('Касса не настроена — заполните адрес KkmServer в Настройках.', true);
+    return;
+  }
+
+  var btn = document.getElementById(method === 'cash' ? 'payCashBtn' : 'payCardBtn');
+  btn.disabled = true;
+  showKkmStatus('Печатаем чек…', false);
+
+  var payload = {
+    Command: 'RegisterCheck',
+    NumDevice: KKM_NUM_DEVICE,
+    IsFiscalCheck: true,
+    CheckStrings: ORDER_CHECK_STRINGS
+  };
+  if (method === 'cash') {
+    payload.Cash = amount;
+  } else {
+    payload.ElectronicPayment = amount;
+  }
+
+  fetch(KKM_URL + '/Execute', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Basic ' + btoa(KKM_LOGIN + ':' + KKM_PASSWORD)
+    },
+    body: JSON.stringify(payload)
+  })
+    .then(function (r) { return r.json().catch(function () { return { Error: 'Пустой/нечитаемый ответ от KkmServer' }; }); })
+    .then(function (kkmResponse) {
+      var success = kkmResponse && kkmResponse.Error === 0;
+      showKkmStatus(
+        success ? 'Чек напечатан.' : ('Касса ответила ошибкой: ' + (kkmResponse.Error !== undefined ? kkmResponse.Error : '?') + (kkmResponse.Description ? ' — ' + kkmResponse.Description : '')),
+        !success
+      );
+      return fetch('api/log_payment.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repair_id: repairId,
+          method: method,
+          amount: amount,
+          receipt_printed: success,
+          kkm_response: kkmResponse
+        })
+      });
+    })
+    .catch(function (err) {
+      showKkmStatus('Не удалось связаться с кассой (' + err.message + '). Проверьте, что KkmServer запущен на этом компьютере и адрес в Настройках верный (попробуйте порт 5894, если 5893 не работает — вероятно, браузер блокирует http-запрос с https-страницы).', true);
+    })
+    .finally(function () {
+      btn.disabled = false;
+    });
+}
+</script>
 
 <?php require __DIR__ . '/../src/layout_footer.php'; ?>
