@@ -115,7 +115,27 @@ CREATE TABLE IF NOT EXISTS parts_catalog (
     id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name       VARCHAR(255) NOT NULL UNIQUE,
     price      DECIMAL(10,2) NOT NULL DEFAULT 0,
+    stock_qty  DECIMAL(10,2) NOT NULL DEFAULT 0,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------
+-- Склад: журнал движений (приход/расход) по комплектующим. Расход
+-- создаётся автоматически при добавлении позиции в заказ (repair_view.php,
+-- category='part') — repair_id указывает, для какого заказа списано.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS stock_movements (
+    id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    part_id    INT UNSIGNED NOT NULL,
+    type       ENUM('in', 'out') NOT NULL,
+    qty        DECIMAL(10,2) NOT NULL,
+    reason     VARCHAR(255) NULL,
+    repair_id  INT UNSIGNED NULL,
+    created_by INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_stock_movements_part FOREIGN KEY (part_id) REFERENCES parts_catalog(id) ON DELETE CASCADE,
+    CONSTRAINT fk_stock_movements_repair FOREIGN KEY (repair_id) REFERENCES repairs(id) ON DELETE SET NULL,
+    CONSTRAINT fk_stock_movements_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------

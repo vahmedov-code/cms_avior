@@ -471,6 +471,38 @@ function suggest_part_names(int $limit = 150): array
 }
 
 /**
+ * Списывает/возвращает остаток на складе при добавлении/удалении позиции
+ * в заказе (category='part' — услуги на склад не влияют). Ищет позицию
+ * в parts_catalog по точному совпадению названия (без учёта регистра) —
+ * если такой позиции в каталоге ещё нет, ничего не списывает (склад
+ * ведётся только по тому, что заведено на warehouse.php, а не по любому
+ * тексту, который когда-либо вписали в заказ). $qty — положительное
+ * число при расходе (заказ), отрицательное — при возврате (удаление
+ * позиции из заказа). Пишет запись в stock_movements для истории.
+ */
+function adjust_stock_for_part_usage(string $partName, float $qtyDelta, ?int $repairId, string $reason): void
+{
+    if ($qtyDelta == 0.0) {
+        return;
+    }
+    $stmt = db()->prepare('SELECT id FROM parts_catalog WHERE name = ? LIMIT 1');
+    $stmt->execute([$partName]);
+    $catalogId = $stmt->fetchColumn();
+    if (!$catalogId) {
+        return; // не в каталоге склада — нечего списывать
+    }
+
+    db()->prepare('UPDATE parts_catalog SET stock_qty = stock_qty - ? WHERE id = ?')
+        ->execute([$qtyDelta, $catalogId]);
+
+    $type = $qtyDelta > 0 ? 'out' : 'in';
+    $stmt = db()->prepare(
+        'INSERT INTO stock_movements (part_id, type, qty, reason, repair_id, created_by) VALUES (?, ?, ?, ?, ?, ?)'
+    );
+    $stmt->execute([$catalogId, $type, abs($qtyDelta), $reason, $repairId, current_user()['id'] ?? null]);
+}
+
+/**
  * Готовый текст SMS для формы «SMS клиенту» — подставляется по умолчанию,
  * сотрудник может отредактировать перед отправкой. $totalDue — сумма к
  * оплате (обычно: комплектующие+услуги минус уже внесённая предоплата).

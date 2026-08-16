@@ -119,12 +119,12 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="module-arrow">Открыть →</div>
   </a>
 
-  <div class="module-card disabled">
-    <span class="module-badge">скоро</span>
+  <a class="module-card active" href="warehouse.php">
     <div class="module-icon">📦</div>
     <div class="module-title">Склад</div>
-    <div class="module-desc">Остатки комплектующих, приход/расход, единая база с формой сметы.</div>
-  </div>
+    <div class="module-desc">Остатки комплектующих, приход/расход, история движений.</div>
+    <div class="module-arrow">Открыть →</div>
+  </a>
 
   <div class="module-card disabled">
     <span class="module-badge">скоро</span>

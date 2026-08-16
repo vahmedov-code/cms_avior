@@ -84,14 +84,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 $cat->execute([$name, $price]);
             }
+
+            // склад: списываем остаток, если позиция заведена на warehouse.php
+            if ($category === 'part') {
+                adjust_stock_for_part_usage($name, $qty ?: 1, $id, 'Заказ ' . $repair['order_no']);
+            }
         }
         redirect('repair_view.php?id=' . $id);
     }
 
     if ($action === 'delete_part') {
         $partId = (int) post('part_id');
+        $partStmt = db()->prepare('SELECT * FROM repair_parts WHERE id = ? AND repair_id = ?');
+        $partStmt->execute([$partId, $id]);
+        $deletedPart = $partStmt->fetch();
+
         $stmt = db()->prepare('DELETE FROM repair_parts WHERE id = ? AND repair_id = ?');
         $stmt->execute([$partId, $id]);
+
+        // склад: возвращаем остаток обратно, если это была комплектующая
+        if ($deletedPart && $deletedPart['category'] === 'part') {
+            adjust_stock_for_part_usage($deletedPart['name'], -(float) $deletedPart['qty'], $id, 'Удалено из заказа ' . $repair['order_no']);
+        }
         redirect('repair_view.php?id=' . $id);
     }
 
