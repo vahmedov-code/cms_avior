@@ -155,7 +155,7 @@ if ($printData): ?>
   </div>
   <div class="actions">
     <button class="btn btn-primary" onclick="window.print()">🖨 Печать</button>
-    <a class="btn" href="repair_view.php?id=<?= (int) $repairId ?>">Открыть заказ в CMS →</a>
+    <a class="btn" href="repair_view.php?id=<?= (int) $repairId ?>">Открыть заказ в CRM →</a>
   </div>
 </div>
 </body>

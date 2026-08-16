@@ -68,7 +68,7 @@ require __DIR__ . '/../src/layout_header.php';
     <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">Логин: <strong><?= e($me['username']) ?></strong> · роль: <?= $me['role'] === 'admin' ? 'администратор' : 'сотрудник' ?></p>
     <form method="post" class="form-grid">
       <input type="hidden" name="action" value="update_name">
-      <label class="field full">Имя (отображается в CMS)
+      <label class="field full">Имя (отображается в CRM)
         <input type="text" name="full_name" value="<?= e($me['full_name']) ?>" required>
       </label>
       <div class="field full">

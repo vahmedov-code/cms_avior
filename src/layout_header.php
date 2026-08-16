@@ -1,9 +1,9 @@
 <?php
 /**
- * Общая шапка CMS. Подключается на защищённых страницах после require_login().
+ * Общая шапка CRM. Подключается на защищённых страницах после require_login().
  * Ожидает переменные: $pageTitle (string), $activeNav (string: dashboard|repairs|clients).
  */
-$pageTitle = $pageTitle ?? 'АВИОР CMS';
+$pageTitle = $pageTitle ?? 'АВИОР CRM';
 $activeNav = $activeNav ?? '';
 $user = current_user();
 ?>
@@ -12,7 +12,7 @@ $user = current_user();
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?= e($pageTitle) ?> — АВИОР CMS</title>
+<title><?= e($pageTitle) ?> — АВИОР CRM</title>
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -21,7 +21,7 @@ $user = current_user();
     <a href="index.php" class="brand-link">
       <div class="brand">
         <h1>АВИОР</h1>
-        <p>Внутренняя CMS сервиса</p>
+        <p>Внутренняя CRM сервиса</p>
       </div>
     </a>
     <nav class="topnav">

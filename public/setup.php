@@ -1,6 +1,6 @@
 <?php
 /**
- * Одноразовая установка: создаёт первого администратора CMS.
+ * Одноразовая установка: создаёт первого администратора CRM.
  * После успешного создания сама блокирует себя (файл setup.lock),
  * повторный запуск невозможен. После использования файл можно
  * удалить с сервера вручную — он больше не нужен.
@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Первичная настройка — АВИОР CMS</title>
+<title>Первичная настройка — АВИОР CRM</title>
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <header>
       <div class="brand">
         <h1>АВИОР</h1>
-        <p>Первичная настройка CMS</p>
+        <p>Первичная настройка CRM</p>
       </div>
     </header>
     <div class="auth-body">
@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <input type="text" name="username" required>
         </label>
         <label class="field">Имя
-          <input type="text" name="full_name" placeholder="Как отображать в CMS">
+          <input type="text" name="full_name" placeholder="Как отображать в CRM">
         </label>
         <label class="field">Пароль
           <input type="password" name="password" minlength="6" required>

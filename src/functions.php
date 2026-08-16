@@ -1,5 +1,5 @@
 <?php
-/** Мелкие утилиты, используемые на страницах CMS. */
+/** Мелкие утилиты, используемые на страницах CRM. */
 
 function e(?string $value): string
 {
@@ -114,7 +114,7 @@ function order_type_label(?string $key): string
 /**
  * Настройки, редактируемые через интерфейс (см. settings.php, только
  * администратор) — хранятся в БД, а не в файлах на сервере. Это задел
- * под white-label: чтобы развернуть CMS для другого клиента, не нужно
+ * под white-label: чтобы развернуть CRM для другого клиента, не нужно
  * лезть в код/конфиг руками — только заполнить форму настроек один раз.
  *
  * Graceful-деградация: если таблица settings ещё не создана (миграция
@@ -280,7 +280,7 @@ function money_in_words_rub(float $amount): string
 
 /**
  * Случайный уникальный токен для публичных ссылок на квитанцию/акт заказа
- * (без входа в CMS) — 64 hex-символа, криптографически случайный.
+ * (без входа в CRM) — 64 hex-символа, криптографически случайный.
  * Присваивается заказу один раз при создании (см. INSERT в repair_new.php,
  * pc_build_new.php, account_memo_new.php, api/mobile/orders.php).
  */
@@ -291,7 +291,7 @@ function generate_public_token(): string
 
 /**
  * Ссылки «отправить» для печатных документов — WhatsApp/Telegram/Email.
- * $publicUrl — ссылка на публичный просмотр документа (без входа в CMS).
+ * $publicUrl — ссылка на публичный просмотр документа (без входа в CRM).
  */
 function build_share_links(string $publicUrl, string $message, string $subject, string $clientPhone, ?string $clientEmail): array
 {

@@ -136,7 +136,7 @@ require __DIR__ . '/../src/layout_header.php';
   <a class="module-card" href="smeta-sborka-pk.html" target="_blank" rel="noopener" style="border-style:dashed;">
     <div class="module-icon" style="background:#eef1f8;color:var(--navy);">📄</div>
     <div class="module-title" style="color:var(--muted);">Смета ПК (офлайн-версия)</div>
-    <div class="module-desc">Старая автономная форма — работает без входа в CMS, но не попадает в «Заказы».</div>
+    <div class="module-desc">Старая автономная форма — работает без входа в CRM, но не попадает в «Заказы».</div>
     <div class="module-arrow">Открыть →</div>
   </a>
 </div>

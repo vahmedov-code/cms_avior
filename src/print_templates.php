@@ -1,14 +1,14 @@
 <?php
 /**
  * Печатные документы заказа — квитанция о приёмке и акт выполненных работ.
- * Общая точка правды для вёрстки/стиля: используется и на странице CMS
+ * Общая точка правды для вёрстки/стиля: используется и на странице CRM
  * (с формой редактирования/кнопками отправки), и на публичной ссылке
- * (доступ по id+public_token, без входа в CMS — для WhatsApp/Telegram/
+ * (доступ по id+public_token, без входа в CRM — для WhatsApp/Telegram/
  * Email и мобильного приложения; см. receipt_public.php/act_public.php).
  *
- * $publicMode = true  → без кнопок «Изменить»/«Открыть в CMS»/отправки,
+ * $publicMode = true  → без кнопок «Изменить»/«Открыть в CRM»/отправки,
  *                        только печать (это уже сама «отправленная» ссылка).
- * $publicMode = false → полный набор действий (используется внутри CMS).
+ * $publicMode = false → полный набор действий (используется внутри CRM).
  */
 
 /** Квитанция о приёмке устройства в ремонт — 2 экземпляра на листе. */
@@ -269,7 +269,7 @@ function render_print_document_shell(
       <a class="btn" href="<?= e($shareLinks['telegram']) ?>" target="_blank" rel="noopener">✈️ Telegram</a>
       <a class="btn" href="<?= e($shareLinks['email']) ?>">📧 Email</a>
     <?php endif; ?>
-    <?php if ($cmsUrl): ?><a class="btn" href="<?= e($cmsUrl) ?>">Открыть заказ в CMS →</a><?php endif; ?>
+    <?php if ($cmsUrl): ?><a class="btn" href="<?= e($cmsUrl) ?>">Открыть заказ в CRM →</a><?php endif; ?>
   <?php endif; ?>
 </div>
 </body>

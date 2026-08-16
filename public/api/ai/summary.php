@@ -2,12 +2,12 @@
 /**
  * Сводка по сервису для внешнего анализа (изначально — чтобы ассистент
  * Claude мог отвечать на вопросы вроде «как дела в сервисе» без входа
- * в CMS). Read-only — ничего не создаёт и не меняет.
+ * в CRM). Read-only — ничего не создаёт и не меняет.
  *
  * GET /api/ai/summary.php?token=...&period=month|last_month|year|all
  *
  * Авторизация — отдельный токен (не тот же, что api_tokens для
- * мобильного приложения): настраивается в CMS → Настройки → «Токен для
+ * мобильного приложения): настраивается в CRM → Настройки → «Токен для
  * AI-сводки» (settings.php, ключ ai_api_token). Без токена в settings —
  * эндпоинт отключён (403), ничего не отдаёт.
  *
@@ -28,7 +28,7 @@ function ai_summary_fail(int $httpCode, string $error): void
 
 $configuredToken = get_setting('ai_api_token');
 if (!$configuredToken) {
-    ai_summary_fail(403, 'AI-сводка не настроена. Задайте токен в CMS → Настройки.');
+    ai_summary_fail(403, 'AI-сводка не настроена. Задайте токен в CRM → Настройки.');
 }
 
 $providedToken = get('token');
@@ -112,7 +112,7 @@ echo json_encode([
         'cogs'       => round($cogs, 2),
         'expenses'   => round($expenses, 2),
         'net_profit' => round($netProfit, 2),
-        'note'       => 'Выручка/себестоимость — по заказам со статусом "выдан", созданным в этом периоде (та же логика, что в CMS на странице Финансы).',
+        'note'       => 'Выручка/себестоимость — по заказам со статусом "выдан", созданным в этом периоде (та же логика, что в CRM на странице Финансы).',
     ],
     'clients'       => [
         'total'          => $clientsTotal,

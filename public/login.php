@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Вход — АВИОР CMS</title>
+<title>Вход — АВИОР CRM</title>
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <header>
       <div class="brand">
         <h1>АВИОР</h1>
-        <p>Внутренняя CMS сервиса</p>
+        <p>Внутренняя CRM сервиса</p>
       </div>
     </header>
     <div class="auth-body">
