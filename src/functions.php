@@ -413,6 +413,33 @@ function sms_provider_label(string $provider): string
     return $labels[$provider] ?? $provider;
 }
 
+/**
+ * Диапазон дат по ключу периода — та же логика, что дублируется в
+ * finance.php и analytics.php (эти два пока не трогаем, чтобы не рисковать
+ * регрессией; новый код использует эту функцию). $period: month (по
+ * умолчанию) | last_month | year | all.
+ */
+function resolve_period(string $period): array
+{
+    $today = new DateTime();
+    switch ($period) {
+        case 'last_month':
+            return [
+                (new DateTime('first day of last month'))->format('Y-m-d'),
+                (new DateTime('last day of last month'))->format('Y-m-d'),
+                'Прошлый месяц',
+                'last_month',
+            ];
+        case 'year':
+            return [$today->format('Y') . '-01-01', $today->format('Y') . '-12-31', 'Этот год', 'year'];
+        case 'all':
+            return ['2000-01-01', '2100-01-01', 'Всё время', 'all'];
+        case 'month':
+        default:
+            return [$today->format('Y-m-01'), $today->format('Y-m-t'), 'Этот месяц', 'month'];
+    }
+}
+
 function default_sms_message(array $repair, float $totalDue): string
 {
     if ($repair['status'] === 'готов') {

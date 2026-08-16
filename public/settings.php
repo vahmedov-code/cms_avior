@@ -9,6 +9,27 @@
 require __DIR__ . '/../src/bootstrap.php';
 require_admin();
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'generate_ai_token') {
+    try {
+        $newToken = bin2hex(random_bytes(24));
+        set_setting('ai_api_token', $newToken);
+        flash_set('Новый токен сгенерирован. Старый больше не действует.', 'success');
+    } catch (PDOException $e) {
+        flash_set('Не удалось сохранить: таблица settings ещё не создана. Примените миграцию.', 'error');
+    }
+    redirect('settings.php');
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'revoke_ai_token') {
+    try {
+        set_setting('ai_api_token', '');
+        flash_set('Токен отозван. AI-сводка отключена.', 'success');
+    } catch (PDOException $e) {
+        flash_set('Не удалось сохранить: таблица settings ещё не создана. Примените миграцию.', 'error');
+    }
+    redirect('settings.php');
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pairs = [
         'company_name'         => trim(post('company_name')),
@@ -44,6 +65,7 @@ if ($currentProvider === null) {
 $currentApiKey = get_setting('sms_api_key') ?? (config()['sms']['api_key'] ?? '');
 $currentGatewayLogin = get_setting('sms_gateway_login') ?? '';
 $currentGatewayPassword = get_setting('sms_gateway_password') ?? '';
+$currentAiToken = get_setting('ai_api_token') ?? '';
 
 $pageTitle = 'Настройки';
 $activeNav = 'settings';
@@ -124,5 +146,38 @@ require __DIR__ . '/../src/layout_header.php';
     <button type="submit" class="btn btn-primary">Сохранить настройки</button>
   </div>
 </form>
+
+<h3 style="color:var(--navy);font-size:15px;margin:28px 0 4px;">AI-сводка (для анализа ассистентом)</h3>
+<p style="color:var(--muted);font-size:13px;max-width:640px;margin:0 0 12px;">
+  Отдельный токен для read-only эндпоинта <code>/api/ai/summary.php</code> —
+  отдаёт сводку по заказам/финансам/клиентам в JSON, ничего не создаёт и
+  не меняет. Дайте этот токен ассистенту (Claude), чтобы он мог отвечать
+  на вопросы вроде «как дела в сервисе» без входа в CMS.
+</p>
+<?php if ($currentAiToken): ?>
+  <div class="table-card" style="padding:14px 16px;max-width:640px;margin-bottom:12px;">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Текущий токен</div>
+    <code style="word-break:break-all;font-size:13px;"><?= e($currentAiToken) ?></code>
+    <div style="font-size:12px;color:var(--muted);margin-top:10px;">Пример запроса:</div>
+    <code style="word-break:break-all;font-size:12px;display:block;margin-top:2px;">
+      <?= e(rtrim($currentSiteUrl ?: 'https://cms.avior.moscow', '/')) ?>/api/ai/summary.php?token=<?= e($currentAiToken) ?>&period=month
+    </code>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:24px;">
+    <form method="post" onsubmit="return confirm('Старый токен перестанет работать. Продолжить?');">
+      <input type="hidden" name="action" value="generate_ai_token">
+      <button type="submit" class="btn btn-sm">🔄 Перевыпустить токен</button>
+    </form>
+    <form method="post" onsubmit="return confirm('AI-сводка перестанет отвечать. Продолжить?');">
+      <input type="hidden" name="action" value="revoke_ai_token">
+      <button type="submit" class="btn btn-sm btn-warn">Отозвать</button>
+    </form>
+  </div>
+<?php else: ?>
+  <form method="post" style="margin-bottom:24px;">
+    <input type="hidden" name="action" value="generate_ai_token">
+    <button type="submit" class="btn btn-primary btn-sm">Сгенерировать токен</button>
+  </form>
+<?php endif; ?>
 
 <?php require __DIR__ . '/../src/layout_footer.php'; ?>
