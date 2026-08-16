@@ -175,16 +175,33 @@ CREATE TABLE IF NOT EXISTS repair_status_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------
+-- Массовые SMS-рассылки — история кампаний (§5 PROJECT_STATE.md).
+-- Должна идти ДО sms_log (там на неё внешний ключ campaign_id).
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sms_campaigns (
+    id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    message          TEXT NOT NULL,
+    recipients_count INT UNSIGNED NOT NULL DEFAULT 0,
+    sent_count       INT UNSIGNED NOT NULL DEFAULT 0,
+    failed_count     INT UNSIGNED NOT NULL DEFAULT 0,
+    created_by       INT UNSIGNED NULL,
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_sms_campaigns_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------
 -- Журнал SMS клиентам (провайдер подключается позже в config.php)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sms_log (
-    id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    repair_id  INT UNSIGNED NULL,
-    phone      VARCHAR(32) NOT NULL,
-    message    TEXT NOT NULL,
-    status     ENUM('sent', 'failed', 'not_configured') NOT NULL DEFAULT 'not_configured',
-    sent_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_sms_log_repair FOREIGN KEY (repair_id) REFERENCES repairs(id) ON DELETE SET NULL
+    id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    repair_id    INT UNSIGNED NULL,
+    campaign_id  INT UNSIGNED NULL,
+    phone        VARCHAR(32) NOT NULL,
+    message      TEXT NOT NULL,
+    status       ENUM('sent', 'failed', 'not_configured') NOT NULL DEFAULT 'not_configured',
+    sent_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_sms_log_repair FOREIGN KEY (repair_id) REFERENCES repairs(id) ON DELETE SET NULL,
+    CONSTRAINT fk_sms_log_campaign FOREIGN KEY (campaign_id) REFERENCES sms_campaigns(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------

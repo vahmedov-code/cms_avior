@@ -135,12 +135,15 @@ require __DIR__ . '/../src/layout_header.php';
   </a>
   <?php endif; ?>
 
-  <div class="module-card disabled">
-    <span class="module-badge">скоро</span>
+
+  <?php if (is_admin()): ?>
+  <a class="module-card active" href="sms_campaign.php">
     <div class="module-icon">📨</div>
     <div class="module-title">SMS-рассылки</div>
-    <div class="module-desc">Массовые уведомления клиентам, шаблоны сообщений.</div>
-  </div>
+    <div class="module-desc">Массовая рассылка клиентам через SMS.ru — выбор получателей, история кампаний.</div>
+    <div class="module-arrow">Открыть →</div>
+  </a>
+  <?php endif; ?>
 
   <a class="module-card" href="smeta-sborka-pk.html" target="_blank" rel="noopener" style="border-style:dashed;">
     <div class="module-icon" style="background:#eef1f8;color:var(--navy);">📄</div>

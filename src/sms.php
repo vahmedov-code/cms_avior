@@ -162,3 +162,54 @@ function send_sms(string $phone, string $message, ?int $repairId = null, ?string
 
     return $success;
 }
+
+/**
+ * Отправка SMS для МАССОВОЙ рассылки (см. sms_campaign.php) — принципиально
+ * ДРУГАЯ функция, не send_sms() выше: всегда идёт через SMS.ru, независимо
+ * от того, что настроено в общем «SMS-провайдер» (там может стоять
+ * Android-шлюз — с личного номера массово рассылать нельзя, риск
+ * блокировки номера оператором за спам-паттерн, обсуждали отдельно).
+ * Использует ОТДЕЛЬНЫЙ ключ bulk_sms_api_key (Настройки → «Массовые
+ * SMS-рассылки») — не путать с обычным sms_api_key для уведомлений
+ * по заказу, это разные ключи специально.
+ */
+function send_bulk_sms(string $phone, string $message, int $campaignId): bool
+{
+    $apiId = get_setting('bulk_sms_api_key') ?: '';
+    $status = 'not_configured';
+    $success = false;
+    $errorMessage = null;
+
+    $phoneDigits = preg_replace('/\D+/', '', $phone) ?? '';
+    if ($phoneDigits !== '' && $phoneDigits[0] === '8' && strlen($phoneDigits) === 11) {
+        $phoneDigits = '7' . substr($phoneDigits, 1);
+    }
+
+    if ($apiId !== '' && $phoneDigits !== '') {
+        $url = 'https://sms.ru/sms/send?' . http_build_query([
+            'api_id' => $apiId,
+            'to'     => $phoneDigits,
+            'msg'    => $message,
+            'json'   => 1,
+        ]);
+        $raw = @file_get_contents($url);
+        $response = $raw !== false ? json_decode($raw, true) : null;
+
+        // Та же проверка, что и в send_sms() — верхнеуровневый status
+        // не значит, что конкретный номер реально принят, смотрим
+        // sms.<номер>.status (см. урок в PROJECT_STATE.md про этот баг).
+        $requestOk = ($response['status'] ?? '') === 'OK';
+        $perNumber = $response['sms'][$phoneDigits] ?? null;
+        $success = $requestOk && $perNumber !== null && ($perNumber['status'] ?? '') === 'OK';
+        $status = $success ? 'sent' : 'failed';
+    } elseif ($phoneDigits === '') {
+        $status = 'failed';
+    }
+
+    $stmt = db()->prepare(
+        'INSERT INTO sms_log (campaign_id, phone, message, status) VALUES (?, ?, ?, ?)'
+    );
+    $stmt->execute([$campaignId, $phone, $message, $status]);
+
+    return $success;
+}

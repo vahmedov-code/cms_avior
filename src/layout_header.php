@@ -30,6 +30,7 @@ $user = current_user();
       <a href="clients.php" class="<?= $activeNav === 'clients' ? 'active' : '' ?>">Клиенты</a>
       <?php if (is_admin()): ?>
         <a href="warehouse.php" class="<?= $activeNav === 'warehouse' ? 'active' : '' ?>">Склад</a>
+        <a href="sms_campaign.php" class="<?= $activeNav === 'sms_campaign' ? 'active' : '' ?>">SMS-рассылки</a>
         <a href="finance.php" class="<?= $activeNav === 'finance' ? 'active' : '' ?>">Финансы</a>
         <a href="analytics.php" class="<?= $activeNav === 'analytics' ? 'active' : '' ?>">Аналитика</a>
       <?php endif; ?>

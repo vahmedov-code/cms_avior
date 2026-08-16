@@ -50,6 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'bank_bik'             => trim(post('bank_bik')),
         'bank_corr_account'    => trim(post('bank_corr_account')),
         'yandex_reviews_url'   => trim(post('yandex_reviews_url')),
+        'bulk_sms_api_key'     => trim(post('bulk_sms_api_key')),
     ];
     try {
         foreach ($pairs as $key => $value) {
@@ -86,6 +87,7 @@ $currentBankAccount = get_setting('bank_account') ?? '';
 $currentBankBik = get_setting('bank_bik') ?? '';
 $currentBankCorrAccount = get_setting('bank_corr_account') ?? '';
 $currentYandexReviewsUrl = get_setting('yandex_reviews_url') ?? '';
+$currentBulkSmsApiKey = get_setting('bulk_sms_api_key') ?? '';
 
 $pageTitle = 'Настройки';
 $activeNav = 'settings';
@@ -208,6 +210,20 @@ require __DIR__ . '/../src/layout_header.php';
   </p>
   <label class="field full">Ссылка
     <input type="text" name="yandex_reviews_url" value="<?= e($currentYandexReviewsUrl) ?>" placeholder="https://yandex.ru/maps/org/.../reviews/">
+  </label>
+
+  <h3 style="grid-column:1/-1;color:var(--navy);font-size:15px;margin:20px 0 4px;">Массовые SMS-рассылки</h3>
+  <p style="grid-column:1/-1;font-size:12px;color:var(--muted);margin:-6px 0 0;">
+    Отдельный ключ SMS.ru — только для массовых рассылок клиентам
+    (раздел «SMS-рассылки» на панели). Обычные уведомления по заказу
+    (выше) продолжают идти через провайдер из блока «SMS-провайдер» —
+    эти два ключа независимы друг от друга. Массовая рассылка
+    <strong>всегда</strong> идёт только через SMS.ru — с личного номера/
+    Android-шлюза рассылать нельзя (риск блокировки номера оператором
+    за спам-паттерн, обсуждали отдельно).
+  </p>
+  <label class="field full">api_id (SMS.ru)
+    <input type="text" name="bulk_sms_api_key" value="<?= e($currentBulkSmsApiKey) ?>">
   </label>
 
   <div class="field full">
