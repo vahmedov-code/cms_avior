@@ -1,23 +1,23 @@
 #!/bin/bash
 #
-# backup-avior.sh — единый бэкап всей инфраструктуры на VPS: база CRM,
-# её config.php (единственное, что НЕ хранится в git — там пароли),
-# и файлы сайтов (avior.moscow, shop.avior.moscow, ux.avior.moscow).
+# backup-avior.sh — единый еженедельный бэкап всей инфраструктуры на VPS:
+# база CRM, её config.php (единственное, что НЕ хранится в git — там
+# пароли), файлы сайтов (avior.moscow, shop.avior.moscow, ux.avior.moscow),
+# с заливкой на Google Диск.
 #
-# Запускать по cron (пример ниже, см. docs/BACKUP.md для полной установки).
-# Бэкапы складываются локально на VPS с ротацией (хранятся $KEEP_DAYS дней)
-# — этого недостаточно самого по себе (если сервер целиком умрёт, умрут
-# и бэкапы на нём же), поэтому в конце файла есть необязательный блок
-# синхронизации в облако (rclone) — раскомментировать и настроить, когда
-# определитесь с провайдером (Яндекс Object Storage — самый простой
-# S3-совместимый вариант для РФ).
+# Режим — ВСЕГДА ОДНА И ТА ЖЕ папка, перезаписывается при каждом запуске
+# (не копится история версий, ни локально, ни на Google Диске). Если
+# нужна история/точки восстановления за разные даты — это осознанный
+# компромисс в пользу простоты, обсудить отдельно, если понадобится.
+#
+# Запуск — по cron, раз в неделю в 3 ночи (см. docs/BACKUP.md для полной
+# установки и настройки rclone/Google Диска).
 
 set -euo pipefail
 
 # ========================= НАСТРОЙКИ (заполнить) =========================
 
-BACKUP_ROOT="/var/backups/avior"
-KEEP_DAYS=14                    # сколько дней хранить локальные бэкапы
+BACKUP_DIR="/var/backups/avior/latest"   # одна и та же папка всегда, без дат
 
 CMS_DB_NAME="avior_cms"
 CMS_DB_USER="avior_user"
@@ -33,18 +33,19 @@ SHOP_DB_PASS=""
 SHOP_PATH="/var/www/shop"       # уточнить реальный путь на сервере
 
 # ux.avior.moscow (репозиторий avior-ux, React SPA со сборкой — бэкапить
-# нужно именно СОБРАННЫЕ файлы (папку dist/ на сервере), исходники и так
-# в git; своей БД у лендинга нет — только путь):
-# UXSRC_PATH=""            # например /var/www/ux (папка со сборкой dist/)
+# нужно именно СОБРАННЫЕ файлы, папку dist/ на сервере; своей БД нет):
+UXSRC_PATH=""                   # например /var/www/ux/dist — заполнить, когда узнаете путь
+
+# Google Диск через rclone — remote нужно настроить один раз командой
+# `rclone config` (см. docs/BACKUP.md), сюда — только его имя и папка:
+GDRIVE_REMOTE="gdrive:avior-backups"
 
 # ===========================================================================
 
-DATE=$(date +%Y%m%d-%H%M)
-DEST="$BACKUP_ROOT/$DATE"
-mkdir -p "$DEST"
-cd "$DEST"
+mkdir -p "$BACKUP_DIR"
+cd "$BACKUP_DIR"
 
-echo "[$(date)] Бэкап начат: $DEST"
+echo "[$(date)] Бэкап начат: $BACKUP_DIR"
 
 # --- 1. CRM: база данных ---
 if [ -n "$CMS_DB_PASS" ] && [ "$CMS_DB_PASS" != "ЗАПОЛНИТЬ" ]; then
@@ -78,25 +79,20 @@ if [ -d "$SHOP_PATH" ]; then
     echo "  ✓ shop файлы сохранены"
 fi
 
-# --- 5. ux.avior.moscow — раскомментировать и заполнить пути выше, когда понадобится ---
-# if [ -d "$UXSRC_PATH" ]; then
-#     tar czf uxsrc-site.tar.gz -C "$(dirname "$UXSRC_PATH")" "$(basename "$UXSRC_PATH")"
-# fi
+# --- 5. ux.avior.moscow: собранные файлы (dist/) ---
+if [ -n "$UXSRC_PATH" ] && [ -d "$UXSRC_PATH" ]; then
+    tar czf ux-site.tar.gz -C "$(dirname "$UXSRC_PATH")" "$(basename "$UXSRC_PATH")"
+    echo "  ✓ ux.avior.moscow сохранён"
+else
+    echo "  ⚠ UXSRC_PATH не заполнен — пропускаю бэкап ux.avior.moscow (см. настройки в начале файла)"
+fi
 
-# --- ротация: удаляем локальные бэкапы старше $KEEP_DAYS дней ---
-find "$BACKUP_ROOT" -maxdepth 1 -mindepth 1 -type d -mtime +"$KEEP_DAYS" -exec rm -rf {} \;
+echo "[$(date)] Локальный бэкап готов: $BACKUP_DIR ($(du -sh "$BACKUP_DIR" | cut -f1))"
 
-echo "[$(date)] Бэкап завершён: $DEST ($(du -sh "$DEST" | cut -f1))"
-
-# ==================== НЕОБЯЗАТЕЛЬНО: синхронизация в облако ====================
-# Локальный бэкап на том же VPS не спасёт, если сервер целиком выйдет из
-# строя. Когда определитесь с облачным хранилищем — раскомментируйте:
-#
-# 1) Установить rclone: curl https://rclone.org/install.sh | sudo bash
-# 2) Настроить удалённый диск: rclone config (для Яндекс Object Storage —
-#    тип "s3", provider "Other", endpoint storage.yandexcloud.net)
-# 3) Раскомментировать:
-#
-# rclone sync "$DEST" "yandex-remote:avior-backups/$DATE" --quiet
-#
-# =================================================================================
+# --- 6. Заливка на Google Диск (перезаписывает ту же папку, не копит версии) ---
+if command -v rclone >/dev/null 2>&1; then
+    rclone sync "$BACKUP_DIR" "$GDRIVE_REMOTE" --quiet
+    echo "[$(date)] Синхронизировано с Google Диском: $GDRIVE_REMOTE"
+else
+    echo "  ⚠ rclone не установлен — бэкап остался только локально на сервере. См. docs/BACKUP.md."
+fi
