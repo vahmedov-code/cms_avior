@@ -314,6 +314,16 @@ function render_print_document_shell(
     ?array $shareLinks,
     bool $isAct = false
 ): string {
+    // Извлекаем чистый publicUrl обратно из уже готовой telegram-ссылки
+    // (там он есть в параметре url= в urlencoded виде) — чтобы не менять
+    // сигнатуру функции и не трогать все места вызова (receipt/act/invoice).
+    $rawShareUrl = '';
+    if (!empty($shareLinks['telegram'])) {
+        $q = parse_url($shareLinks['telegram'], PHP_URL_QUERY);
+        parse_str($q ?? '', $qs);
+        $rawShareUrl = $qs['url'] ?? '';
+    }
+
     ob_start(); ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -387,10 +397,45 @@ function render_print_document_shell(
       <a class="btn" href="<?= e($shareLinks['whatsapp']) ?>" target="_blank" rel="noopener">💬 WhatsApp</a>
       <a class="btn" href="<?= e($shareLinks['telegram']) ?>" target="_blank" rel="noopener">✈️ Telegram</a>
       <a class="btn" href="<?= e($shareLinks['email']) ?>">📧 Email</a>
+      <?php if ($rawShareUrl !== ''): ?>
+        <button type="button" class="btn" id="copyLinkBtn" onclick="copyDocLink(this, <?= json_encode($rawShareUrl) ?>)">📋 Скопировать ссылку</button>
+      <?php endif; ?>
     <?php endif; ?>
     <?php if ($cmsUrl): ?><a class="btn" href="<?= e($cmsUrl) ?>">Открыть заказ в CRM →</a><?php endif; ?>
   <?php endif; ?>
 </div>
+<script>
+/**
+ * Копирует ссылку на документ в буфер обмена — запасной вариант, когда
+ * на устройстве не настроено почтовое приложение и mailto: ничего не
+ * делает (браузер просто остаётся на месте). Работает всегда, независимо
+ * от того, что установлено на телефоне/компьютере — ссылку потом можно
+ * вставить в любой мессенджер или письмо вручную.
+ */
+function copyDocLink(btn, url) {
+  var done = function () {
+    var original = btn.textContent;
+    btn.textContent = '✓ Скопировано';
+    setTimeout(function () { btn.textContent = original; }, 2000);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(url).then(done).catch(function () { legacyCopy(url, done); });
+  } else {
+    legacyCopy(url, done);
+  }
+}
+function legacyCopy(text, done) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try { document.execCommand('copy'); done(); } catch (e) {}
+  document.body.removeChild(ta);
+}
+</script>
 </body>
 </html>
     <?php
