@@ -19,7 +19,7 @@
 | **cms.avior.moscow** | Эта CRM (заказы, клиенты, финансы) | `vahmedov-code/cms_avior` (этот) | `git pull` в `/var/www/cms` |
 | **avior.moscow** | Основной публичный сайт сервиса | `vahmedov-code/Avior-site` (публичный) | `curl` файл-за-файлом из `raw.githubusercontent.com` в `/var/www/avior` — **не git-репозиторий на сервере** |
 | **shop.avior.moscow** | Интернет-магазин комплектующих/б.у. устройств (Laravel) | отдельный (детали — уточнить в PROJECT_STATE.md, если есть) | своя схема деплоя, отдельная БД |
-| **ux.avior.moscow** | Лендинг «AVIOR UX» — сайты для мастеров и малого бизнеса (портфолио услуг веб-разработки Вейса) | `vahmedov-code/avior-ux` (публичный) | React + TypeScript + Vite + Tailwind — **нужна сборка** (`npm run build`), не голые файлы как у avior.moscow; способ деплоя на сервер уточнить у Вейса |
+| **ux.avior.moscow** | Лендинг «AVIOR UX» — сайты для мастеров и малого бизнеса (портфолио услуг веб-разработки Вейса) | `vahmedov-code/avior-ux` (публичный) | `git pull` на сервере → `npm install` (если новые зависимости) → `npm run build` → nginx отдаёт `dist/` |
 
 **Важно:** у каждого сайта — свой репозиторий и свой способ деплоя, они
 не связаны между собой на уровне кода. Общее у них — только физический
