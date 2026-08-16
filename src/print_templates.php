@@ -393,7 +393,7 @@ function render_print_document_shell(
 </div>
 <div class="actions">
   <button class="btn btn-primary" onclick="window.print()">🖨 Печать</button>
-  <button class="btn" id="pdfBtn" onclick="downloadDocPdf(this, <?= json_encode($pdfFileName) ?>)">⬇️ Скачать PDF</button>
+  <button class="btn" id="pdfBtn" onclick="<?= e('downloadDocPdf(this, ' . json_encode($pdfFileName) . ')') ?>">⬇️ Скачать PDF</button>
 </div>
 <script>
 /**
