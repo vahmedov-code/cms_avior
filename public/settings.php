@@ -49,6 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'bank_account'         => trim(post('bank_account')),
         'bank_bik'             => trim(post('bank_bik')),
         'bank_corr_account'    => trim(post('bank_corr_account')),
+        'yandex_reviews_url'   => trim(post('yandex_reviews_url')),
     ];
     try {
         foreach ($pairs as $key => $value) {
@@ -84,6 +85,7 @@ $currentBankName = get_setting('bank_name') ?? '';
 $currentBankAccount = get_setting('bank_account') ?? '';
 $currentBankBik = get_setting('bank_bik') ?? '';
 $currentBankCorrAccount = get_setting('bank_corr_account') ?? '';
+$currentYandexReviewsUrl = get_setting('yandex_reviews_url') ?? '';
 
 $pageTitle = 'Настройки';
 $activeNav = 'settings';
@@ -196,6 +198,17 @@ require __DIR__ . '/../src/layout_header.php';
     нажать «Online» внизу экрана → логин и пароль появятся в разделе
     Cloud Server — скопировать сюда как есть.
   </p>
+
+  <h3 style="grid-column:1/-1;color:var(--navy);font-size:15px;margin:20px 0 4px;">Ссылка на отзыв (Яндекс Карты)</h3>
+  <p style="grid-column:1/-1;font-size:12px;color:var(--muted);margin:-6px 0 0;">
+    Используется в шаблоне SMS-просьбы об отзыве — кнопка «📝 Попросить
+    отзыв» на странице заказа подставит эту ссылку в текст сообщения.
+    Найти свою: откройте карточку организации на Яндекс Картах → «Оставить
+    отзыв» → скопируйте ссылку из адресной строки.
+  </p>
+  <label class="field full">Ссылка
+    <input type="text" name="yandex_reviews_url" value="<?= e($currentYandexReviewsUrl) ?>" placeholder="https://yandex.ru/maps/org/.../reviews/">
+  </label>
 
   <div class="field full">
     <button type="submit" class="btn btn-primary">Сохранить настройки</button>

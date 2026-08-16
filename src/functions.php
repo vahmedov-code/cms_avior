@@ -440,6 +440,19 @@ function resolve_period(string $period): array
     }
 }
 
+/**
+ * Текст-шаблон «попросить отзыв» — НЕ подставляется автоматически по
+ * статусу (в отличие от default_sms_message()), только по ручному клику
+ * на кнопку в форме SMS (сотрудник сам решает, кому и когда отправить,
+ * обычно — через несколько дней после выдачи заказа).
+ */
+function review_request_sms_message(array $repair): string
+{
+    $url = get_setting('yandex_reviews_url');
+    $text = 'Здравствуйте! Вас приветствует сервис АВИОР. Если остались довольны ремонтом — будем очень благодарны за отзыв на Яндекс Картах';
+    return $url ? ($text . ': ' . $url) : ($text . '.');
+}
+
 function default_sms_message(array $repair, float $totalDue): string
 {
     if ($repair['status'] === 'готов') {

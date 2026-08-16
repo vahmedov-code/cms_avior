@@ -322,7 +322,10 @@ require __DIR__ . '/../src/layout_header.php';
       <form method="post">
         <input type="hidden" name="action" value="send_sms">
         <label class="field">Текст сообщения
-          <textarea name="message" rows="3" placeholder="Например: Ваш ноутбук готов, можно забрать."><?php
+          <div class="chip-suggestions">
+            <button type="button" class="btn btn-sm chip" onclick="<?= e('document.getElementById(\'smsMessageField\').value = ' . json_encode(review_request_sms_message($repair)) . ';') ?>">📝 Попросить отзыв (Яндекс Карты)</button>
+          </div>
+          <textarea name="message" id="smsMessageField" rows="3" placeholder="Например: Ваш ноутбук готов, можно забрать."><?php
             $totalDue = max(0, $partsTotal + $servicesTotal - (float) $repair['prepayment']);
             echo e(default_sms_message($repair, $totalDue));
           ?></textarea>
