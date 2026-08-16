@@ -12,6 +12,40 @@ $statusFilterList = $statusFilter !== ''
     ? array_values(array_intersect(explode(',', $statusFilter), $statuses))
     : [];
 
+// Сортировка по клику на заголовок столбца — whitelist имя параметра =>
+// реальное SQL-выражение (никогда не подставляем $_GET напрямую в ORDER BY).
+$sortColumns = [
+    'order_no'    => 'r.order_no',
+    'client_name' => 'c.full_name',
+    'status'      => 'r.status',
+    'total'       => 'parts_total',
+    'updated_at'  => 'r.updated_at',
+];
+$sortColumn = get('sort');
+if (!array_key_exists($sortColumn, $sortColumns)) {
+    $sortColumn = null;
+}
+$sortDir = strtolower(get('dir')) === 'asc' ? 'ASC' : 'DESC';
+
+/** Ссылка на заголовок столбца — сохраняет остальные фильтры, переключает направление при повторном клике. */
+function sort_link(string $column, string $label, ?string $currentSort, string $currentDir): string
+{
+    $nextDir = ($currentSort === $column && $currentDir === 'ASC') ? 'desc' : 'asc';
+    $qs = array_filter([
+        'status' => get('status'),
+        'type'   => get('type'),
+        'q'      => get('q'),
+        'sort'   => $column,
+        'dir'    => $nextDir,
+    ], fn($v) => $v !== '');
+    $arrow = '';
+    if ($currentSort === $column) {
+        $arrow = $currentDir === 'ASC' ? ' ↑' : ' ↓';
+    }
+    return '<a href="repairs.php?' . http_build_query($qs) . '" style="color:inherit;text-decoration:none;">'
+        . e($label) . $arrow . '</a>';
+}
+
 // Поиск: номер заказа, содержимое QR-кода с квитанции/статуса (там есть
 // order_no в ссылке) или клиент/телефон.
 $q = trim(get('q'));
@@ -62,7 +96,10 @@ if ($q !== '') {
 if ($where) {
     $sql .= ' WHERE ' . implode(' AND ', $where);
 }
-$sql .= ' ORDER BY r.created_at DESC LIMIT 300';
+$sql .= $sortColumn
+    ? ' ORDER BY ' . $sortColumns[$sortColumn] . ' ' . $sortDir
+    : ' ORDER BY r.created_at DESC';
+$sql .= ' LIMIT 300';
 
 $stmt = db()->prepare($sql);
 $stmt->execute($params);
@@ -114,13 +151,13 @@ require __DIR__ . '/../src/layout_header.php';
   <table>
     <thead>
       <tr>
-        <th>№ заказа</th>
+        <th><?= sort_link('order_no', '№ заказа', $sortColumn, $sortDir) ?></th>
         <th>Тип</th>
-        <th>Клиент</th>
+        <th><?= sort_link('client_name', 'Клиент', $sortColumn, $sortDir) ?></th>
         <th>Устройство</th>
-        <th>Статус</th>
-        <th>Сумма</th>
-        <th>Обновлён</th>
+        <th><?= sort_link('status', 'Статус', $sortColumn, $sortDir) ?></th>
+        <th><?= sort_link('total', 'Сумма', $sortColumn, $sortDir) ?></th>
+        <th><?= sort_link('updated_at', 'Обновлён', $sortColumn, $sortDir) ?></th>
         <th></th>
       </tr>
     </thead>
