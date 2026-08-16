@@ -40,6 +40,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'sms_api_key'          => trim(post('sms_api_key')),
         'sms_gateway_login'    => trim(post('sms_gateway_login')),
         'sms_gateway_password' => trim(post('sms_gateway_password')),
+        'legal_name'           => trim(post('legal_name')),
+        'legal_inn'            => trim(post('legal_inn')),
+        'legal_kpp'            => trim(post('legal_kpp')),
+        'legal_ogrn'           => trim(post('legal_ogrn')),
+        'legal_email'          => trim(post('legal_email')),
+        'bank_name'            => trim(post('bank_name')),
+        'bank_account'         => trim(post('bank_account')),
+        'bank_bik'             => trim(post('bank_bik')),
+        'bank_corr_account'    => trim(post('bank_corr_account')),
     ];
     try {
         foreach ($pairs as $key => $value) {
@@ -66,6 +75,15 @@ $currentApiKey = get_setting('sms_api_key') ?? (config()['sms']['api_key'] ?? ''
 $currentGatewayLogin = get_setting('sms_gateway_login') ?? '';
 $currentGatewayPassword = get_setting('sms_gateway_password') ?? '';
 $currentAiToken = get_setting('ai_api_token') ?? '';
+$currentLegalName = get_setting('legal_name') ?? '';
+$currentLegalInn = get_setting('legal_inn') ?? '';
+$currentLegalKpp = get_setting('legal_kpp') ?? '';
+$currentLegalOgrn = get_setting('legal_ogrn') ?? '';
+$currentLegalEmail = get_setting('legal_email') ?? '';
+$currentBankName = get_setting('bank_name') ?? '';
+$currentBankAccount = get_setting('bank_account') ?? '';
+$currentBankBik = get_setting('bank_bik') ?? '';
+$currentBankCorrAccount = get_setting('bank_corr_account') ?? '';
 
 $pageTitle = 'Настройки';
 $activeNav = 'settings';
@@ -96,6 +114,43 @@ require __DIR__ . '/../src/layout_header.php';
   </label>
   <label class="field">Телефон
     <input type="text" name="company_phone" value="<?= e($company['phone']) ?>">
+  </label>
+
+  <h3 style="grid-column:1/-1;color:var(--navy);font-size:15px;margin:20px 0 4px;">Юридические реквизиты</h3>
+  <p style="grid-column:1/-1;font-size:12px;color:var(--muted);margin:-6px 0 0;">
+    Отдельно от названия для клиентов (АВИОР) выше — это точное
+    юридическое наименование ИП/ООО, для документов, где нужны официальные
+    реквизиты. Пока нигде в печатных формах не используется — задел на
+    будущее, чтобы данные не пришлось вводить второй раз.
+  </p>
+  <label class="field full">Наименование (юр. лицо)
+    <input type="text" name="legal_name" value="<?= e($currentLegalName) ?>" placeholder="ИП Иванов Иван Иванович">
+  </label>
+  <label class="field">ИНН
+    <input type="text" name="legal_inn" value="<?= e($currentLegalInn) ?>">
+  </label>
+  <label class="field">КПП (если есть)
+    <input type="text" name="legal_kpp" value="<?= e($currentLegalKpp) ?>">
+  </label>
+  <label class="field">ОГРН / ОГРНИП
+    <input type="text" name="legal_ogrn" value="<?= e($currentLegalOgrn) ?>">
+  </label>
+  <label class="field">Email
+    <input type="email" name="legal_email" value="<?= e($currentLegalEmail) ?>">
+  </label>
+
+  <h3 style="grid-column:1/-1;color:var(--navy);font-size:15px;margin:20px 0 4px;">Банковские реквизиты</h3>
+  <label class="field full">Банк
+    <input type="text" name="bank_name" value="<?= e($currentBankName) ?>">
+  </label>
+  <label class="field">Расчётный счёт
+    <input type="text" name="bank_account" value="<?= e($currentBankAccount) ?>">
+  </label>
+  <label class="field">БИК
+    <input type="text" name="bank_bik" value="<?= e($currentBankBik) ?>">
+  </label>
+  <label class="field">Корр. счёт
+    <input type="text" name="bank_corr_account" value="<?= e($currentBankCorrAccount) ?>">
   </label>
 
   <h3 style="grid-column:1/-1;color:var(--navy);font-size:15px;margin:20px 0 4px;">Публичный адрес сайта</h3>
