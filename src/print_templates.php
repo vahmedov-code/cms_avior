@@ -41,7 +41,7 @@ function render_receipt_page(array $repair, bool $publicMode = false): string
         <div class="head-row">
           <div class="head-fields">
             <h1 class="doc-title">Квитанция № <?= e($repair['order_no']) ?> от <?= e($docDate) ?></h1>
-            <p class="field"><strong>Исполнитель:</strong> <?= e($company['executor_name']) ?></p>
+            <p class="field"><strong>Исполнитель:</strong> <?= e(executor_display_name($repair)) ?></p>
             <p class="field"><strong>Адрес:</strong> <?= e($company['address']) ?></p>
             <p class="field"><strong>Телефон:</strong> <?= e($company['phone']) ?></p>
             <p class="field"><strong>Заказчик:</strong> <?= $clientLine ?></p>
@@ -127,7 +127,7 @@ function render_act_page(array $repair, array $parts, bool $publicMode = false):
         <div class="head-row">
           <div class="head-fields">
             <h1 class="doc-title">Акт сдачи-приёмки выполненных работ (оказанных услуг)<br>№ <?= e($repair['order_no']) ?> от <?= e($docDate) ?></h1>
-            <p class="field"><strong>Исполнитель:</strong> <?= e($company['executor_name']) ?></p>
+            <p class="field"><strong>Исполнитель:</strong> <?= e(executor_display_name($repair)) ?></p>
             <p class="field"><strong>Адрес:</strong> <?= e($company['address']) ?></p>
             <p class="field"><strong>Телефон:</strong> <?= e($company['phone']) ?></p>
             <p class="field"><strong>Заказчик:</strong> <?= $clientLine ?></p>
