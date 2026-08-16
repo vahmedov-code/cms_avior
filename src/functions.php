@@ -153,6 +153,15 @@ function order_type_label(?string $key): string
     return order_types()[$key] ?? ($key ?? 'Ремонт');
 }
 
+function role_label(?string $role): string
+{
+    return [
+        'owner'    => 'владелец',
+        'admin'    => 'администратор',
+        'engineer' => 'инженер-приёмщик',
+    ][$role] ?? ($role ?? '—');
+}
+
 /**
  * Настройки, редактируемые через интерфейс (см. settings.php, только
  * администратор) — хранятся в БД, а не в файлах на сервере. Это задел

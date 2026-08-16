@@ -1,17 +1,23 @@
 <?php
 /**
  * Сотрудники — добавление/удаление учётных записей CRM, смена роли,
- * сброс пароля сотруднику. Доступно только администраторам.
+ * сброс пароля сотруднику. Доступно только владельцу (owner) — админ
+ * (admin) сотрудниками не управляет, это осознанно.
  */
 require __DIR__ . '/../src/bootstrap.php';
-require_admin();
+require_owner();
 
 $me = current_user();
 $error = '';
 
-function admin_count(): int
+function owner_count(): int
 {
-    return (int) db()->query("SELECT COUNT(*) c FROM users WHERE role = 'admin'")->fetch()['c'];
+    return (int) db()->query("SELECT COUNT(*) c FROM users WHERE role = 'owner'")->fetch()['c'];
+}
+
+function valid_role(string $role): string
+{
+    return in_array($role, ['owner', 'admin', 'engineer'], true) ? $role : 'engineer';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -21,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $username = post('username');
         $fullName = post('full_name');
         $password = $_POST['password'] ?? '';
-        $role = post('role') === 'admin' ? 'admin' : 'manager';
+        $role = valid_role(post('role'));
 
         if (strlen($username) < 3) {
             $error = 'Логин должен быть не короче 3 символов.';
@@ -59,14 +65,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'update_role') {
         $targetId = (int) post('user_id');
-        $newRole = post('role') === 'admin' ? 'admin' : 'manager';
+        $newRole = valid_role(post('role'));
 
         $stmt = db()->prepare('SELECT role FROM users WHERE id = ?');
         $stmt->execute([$targetId]);
         $target = $stmt->fetch();
 
-        if ($target && $target['role'] === 'admin' && $newRole !== 'admin' && admin_count() <= 1) {
-            $error = 'Нельзя понизить последнего администратора — сначала назначьте другого.';
+        if ($target && $target['role'] === 'owner' && $newRole !== 'owner' && owner_count() <= 1) {
+            $error = 'Нельзя понизить последнего владельца — сначала назначьте другого.';
         } else {
             db()->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$newRole, $targetId]);
             if ($targetId === (int) $me['id']) {
@@ -89,8 +95,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!$target) {
                 $error = 'Сотрудник не найден.';
-            } elseif ($target['role'] === 'admin' && admin_count() <= 1) {
-                $error = 'Нельзя удалить последнего администратора.';
+            } elseif ($target['role'] === 'owner' && owner_count() <= 1) {
+                $error = 'Нельзя удалить последнего владельца.';
             } else {
                 db()->prepare('DELETE FROM users WHERE id = ?')->execute([$targetId]);
                 flash_set('Сотрудник «' . $target['full_name'] . '» удалён.', 'success');
@@ -131,8 +137,9 @@ require __DIR__ . '/../src/layout_header.php';
               <input type="hidden" name="action" value="update_role">
               <input type="hidden" name="user_id" value="<?= (int) $emp['id'] ?>">
               <select name="role" onchange="this.form.submit()">
-                <option value="manager" <?= $emp['role'] === 'manager' ? 'selected' : '' ?>>сотрудник</option>
+                <option value="engineer" <?= $emp['role'] === 'engineer' ? 'selected' : '' ?>>инженер-приёмщик</option>
                 <option value="admin" <?= $emp['role'] === 'admin' ? 'selected' : '' ?>>администратор</option>
+                <option value="owner" <?= $emp['role'] === 'owner' ? 'selected' : '' ?>>владелец</option>
               </select>
             </form>
           </td>
@@ -175,8 +182,9 @@ require __DIR__ . '/../src/layout_header.php';
   </label>
   <label class="field">Роль
     <select name="role">
-      <option value="manager">Сотрудник</option>
+      <option value="engineer">Инженер-приёмщик</option>
       <option value="admin">Администратор</option>
+      <option value="owner">Владелец</option>
     </select>
   </label>
   <div class="field full">

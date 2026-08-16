@@ -65,7 +65,7 @@ require __DIR__ . '/../src/layout_header.php';
 <div class="finance-grid" style="max-width:820px;">
   <div class="table-card" style="padding:16px;">
     <h3 style="margin:0 0 12px;font-size:15px;color:var(--navy);">Данные учётной записи</h3>
-    <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">Логин: <strong><?= e($me['username']) ?></strong> · роль: <?= $me['role'] === 'admin' ? 'администратор' : 'сотрудник' ?></p>
+    <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">Логин: <strong><?= e($me['username']) ?></strong> · роль: <?= e(role_label($me['role'])) ?></p>
     <form method="post" class="form-grid">
       <input type="hidden" name="action" value="update_name">
       <label class="field full">Имя (отображается в CRM)

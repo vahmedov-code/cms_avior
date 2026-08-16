@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . '/../src/bootstrap.php';
 require_login();
+require_admin(); // финансы/аналитика/склад — не для инженера-приёмщика
 
 $pageTitle = 'Финансы';
 $activeNav = 'finance';

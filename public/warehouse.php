@@ -8,6 +8,7 @@
  */
 require __DIR__ . '/../src/bootstrap.php';
 require_login();
+require_admin(); // склад — не для инженера-приёмщика
 
 $pageTitle = 'Склад';
 $activeNav = 'warehouse';

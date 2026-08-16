@@ -1,13 +1,13 @@
 <?php
 /**
- * Настройки CRM — только администратор. Хранятся в таблице settings
+ * Настройки CRM — только владельцу. Хранятся в таблице settings
  * (см. get_setting()/set_setting() в functions.php), применяются сразу,
  * без правки файлов на сервере. Задел под white-label: чтобы развернуть
  * CRM для другого сервиса, достаточно один раз заполнить эту форму —
  * менять код/config.php не нужно.
  */
 require __DIR__ . '/../src/bootstrap.php';
-require_admin();
+require_owner();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'generate_ai_token') {
     try {

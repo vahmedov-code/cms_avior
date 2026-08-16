@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     username      VARCHAR(64) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     full_name     VARCHAR(150) NOT NULL,
-    role          ENUM('admin', 'manager') NOT NULL DEFAULT 'manager',
+    role          ENUM('owner', 'admin', 'engineer') NOT NULL DEFAULT 'engineer',
     created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

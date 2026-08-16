@@ -82,6 +82,7 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="module-arrow">Открыть →</div>
   </a>
 
+  <?php if (is_admin()): ?>
   <a class="module-card active" href="finance.php">
     <div class="module-icon">💰</div>
     <div class="module-title">Финансы</div>
@@ -95,8 +96,9 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="module-desc">Источники клиентов, популярные устройства, прибыльность.</div>
     <div class="module-arrow">Открыть →</div>
   </a>
+  <?php endif; ?>
 
-  <?php if (is_admin()): ?>
+  <?php if (is_owner()): ?>
   <a class="module-card active" href="employees.php">
     <div class="module-icon">👥</div>
     <div class="module-title">Сотрудники</div>
@@ -119,12 +121,14 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="module-arrow">Открыть →</div>
   </a>
 
+  <?php if (is_admin()): ?>
   <a class="module-card active" href="warehouse.php">
     <div class="module-icon">📦</div>
     <div class="module-title">Склад</div>
     <div class="module-desc">Остатки комплектующих, приход/расход, история движений.</div>
     <div class="module-arrow">Открыть →</div>
   </a>
+  <?php endif; ?>
 
   <div class="module-card disabled">
     <span class="module-badge">скоро</span>
