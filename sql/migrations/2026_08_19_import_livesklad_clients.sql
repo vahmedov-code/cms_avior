@@ -10,12 +10,12 @@
 -- Применить: mysql -u avior_user -p avior_cms < sql/migrations/2026_08_19_import_livesklad_clients.sql
 
 CREATE TEMPORARY TABLE tmp_import_clients (
-    full_name VARCHAR(150) NOT NULL,
-    phone     VARCHAR(32)  NOT NULL,
-    address   VARCHAR(255) NULL,
-    notes     TEXT NULL,
-    source    VARCHAR(20) NULL
-);
+    full_name VARCHAR(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+    phone     VARCHAR(32)  COLLATE utf8mb4_unicode_ci NOT NULL,
+    address   VARCHAR(255) COLLATE utf8mb4_unicode_ci NULL,
+    notes     TEXT         COLLATE utf8mb4_unicode_ci NULL,
+    source    VARCHAR(20)  COLLATE utf8mb4_unicode_ci NULL
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 INSERT INTO tmp_import_clients (full_name, phone, address, notes, source) VALUES
 ('1', '+7 (910) 475-02-06', NULL, 'Импортировано из ЛайвСклад 19.08.2026.', NULL),
