@@ -97,14 +97,20 @@ require __DIR__ . '/../src/layout_header.php';
   <?php endforeach; ?>
 </div>
 
-<div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;">
-  <a href="repairs.php" class="btn btn-sm <?= $statusFilter === '' ? 'btn-primary' : '' ?>">Все статусы</a>
-  <?php foreach ($statuses as $s): ?>
-    <a href="repairs.php?status=<?= urlencode($s) ?>" class="btn btn-sm <?= $statusFilter === $s ? 'btn-primary' : '' ?>"><?= e($s) ?></a>
-  <?php endforeach; ?>
+<div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="repairs.php" class="btn btn-sm <?= $statusFilter === '' ? 'btn-primary' : '' ?>">Все статусы</a>
+    <?php foreach ($statuses as $s): ?>
+      <a href="repairs.php?status=<?= urlencode($s) ?>" class="btn btn-sm <?= $statusFilter === $s ? 'btn-primary' : '' ?>"><?= e($s) ?></a>
+    <?php endforeach; ?>
+  </div>
+  <div class="view-toggle no-print" role="group" aria-label="Вид списка заказов">
+    <button type="button" id="viewTiles" class="btn btn-sm" onclick="setOrdersView('tiles')" title="Плитками">▤ Плитки</button>
+    <button type="button" id="viewList" class="btn btn-sm" onclick="setOrdersView('list')" title="Списком">☰ Список</button>
+  </div>
 </div>
 
-<div class="table-card">
+<div class="table-card" id="ordersTableCard">
   <table>
     <thead>
       <tr>

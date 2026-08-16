@@ -339,4 +339,21 @@ tr[data-category="service"]{background:#fdf7e8;}
     color:var(--muted);
     margin-bottom:2px;
   }
+
+  /* Режим "Список" на repairs.php (#ordersTableCard.list-view) — отменяет
+     стековые карточки-плитки выше и возвращает обычную таблицу с
+     горизонтальным скроллом, компактнее и плотнее по количеству заказов
+     на экране. Затрагивает только эту таблицу (по id), остальные
+     таблицы сайта (клиенты, сотрудники и т.д.) остаются как были. */
+  #ordersTableCard.list-view{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  #ordersTableCard.list-view table{display:table;width:max-content;min-width:100%;}
+  #ordersTableCard.list-view thead{display:table-header-group;}
+  #ordersTableCard.list-view tbody{display:table-row-group;}
+  #ordersTableCard.list-view tr{display:table-row;border:none;border-radius:0;margin-bottom:0;padding:0;}
+  #ordersTableCard.list-view td{display:table-cell;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
+  #ordersTableCard.list-view td[data-label]::before{content:none;}
+
+  .view-toggle{display:inline-flex;gap:6px;}
 }
+
+.view-toggle{display:none;}
