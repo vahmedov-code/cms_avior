@@ -314,15 +314,16 @@ function render_print_document_shell(
     ?array $shareLinks,
     bool $isAct = false
 ): string {
-    // Извлекаем чистый publicUrl обратно из уже готовой telegram-ссылки
-    // (там он есть в параметре url= в urlencoded виде) — чтобы не менять
-    // сигнатуру функции и не трогать все места вызова (receipt/act/invoice).
-    $rawShareUrl = '';
-    if (!empty($shareLinks['telegram'])) {
-        $q = parse_url($shareLinks['telegram'], PHP_URL_QUERY);
-        parse_str($q ?? '', $qs);
-        $rawShareUrl = $qs['url'] ?? '';
-    }
+    // editUrl/cmsUrl/shareLinks больше не используются в разметке —
+    // параметры оставлены ради обратной совместимости с местами вызова
+    // (repair_receipt.php, repair_act.php, invoice.php и публичные версии),
+    // чтобы не трогать все 6+ файлов, которые их передают. Отправка
+    // клиенту теперь делается через мобильное приложение (там уже есть
+    // свой, более удобный экран «Поделиться» с WhatsApp/Email/другое) —
+    // здесь оставили только Печать и Скачать PDF.
+
+    // Имя файла для PDF — из заголовка документа, без спецсимволов.
+    $pdfFileName = trim(preg_replace('/[^A-Za-zА-Яа-яЁё0-9]+/u', '_', $title), '_') . '.pdf';
 
     ob_start(); ?>
 <!DOCTYPE html>
@@ -331,6 +332,7 @@ function render_print_document_shell(
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e($title) ?></title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
   :root{ --navy:#152a4e; --border:#dde3ec; --muted:#6b7385; }
   *{box-sizing:border-box;}
@@ -386,54 +388,39 @@ function render_print_document_shell(
 </style>
 </head>
 <body>
-<div class="page">
+<div class="page" id="docPage">
   <?= $bodyHtml ?>
 </div>
 <div class="actions">
   <button class="btn btn-primary" onclick="window.print()">🖨 Печать</button>
-  <?php if (!$publicMode): ?>
-    <?php if ($editUrl): ?><a class="btn" href="<?= e($editUrl) ?>">✎ Изменить данные</a><?php endif; ?>
-    <?php if ($shareLinks): ?>
-      <a class="btn" href="<?= e($shareLinks['whatsapp']) ?>" target="_blank" rel="noopener">💬 WhatsApp</a>
-      <a class="btn" href="<?= e($shareLinks['telegram']) ?>" target="_blank" rel="noopener">✈️ Telegram</a>
-      <a class="btn" href="<?= e($shareLinks['email']) ?>">📧 Email</a>
-      <?php if ($rawShareUrl !== ''): ?>
-        <button type="button" class="btn" id="copyLinkBtn" onclick="copyDocLink(this, <?= json_encode($rawShareUrl) ?>)">📋 Скопировать ссылку</button>
-      <?php endif; ?>
-    <?php endif; ?>
-    <?php if ($cmsUrl): ?><a class="btn" href="<?= e($cmsUrl) ?>">Открыть заказ в CRM →</a><?php endif; ?>
-  <?php endif; ?>
+  <button class="btn" id="pdfBtn" onclick="downloadDocPdf(this, <?= json_encode($pdfFileName) ?>)">⬇️ Скачать PDF</button>
 </div>
 <script>
 /**
- * Копирует ссылку на документ в буфер обмена — запасной вариант, когда
- * на устройстве не настроено почтовое приложение и mailto: ничего не
- * делает (браузер просто остаётся на месте). Работает всегда, независимо
- * от того, что установлено на телефоне/компьютере — ссылку потом можно
- * вставить в любой мессенджер или письмо вручную.
+ * Скачивание документа в PDF прямо из браузера, без серверных PHP-
+ * библиотек (в проекте принципиально нет composer-зависимостей) —
+ * html2pdf.js (CDN, jsPDF+html2canvas внутри) рендерит div#docPage
+ * в PDF-файл на стороне клиента.
  */
-function copyDocLink(btn, url) {
-  var done = function () {
-    var original = btn.textContent;
-    btn.textContent = '✓ Скопировано';
-    setTimeout(function () { btn.textContent = original; }, 2000);
-  };
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(url).then(done).catch(function () { legacyCopy(url, done); });
-  } else {
-    legacyCopy(url, done);
-  }
-}
-function legacyCopy(text, done) {
-  var ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.position = 'fixed';
-  ta.style.opacity = '0';
-  document.body.appendChild(ta);
-  ta.focus();
-  ta.select();
-  try { document.execCommand('copy'); done(); } catch (e) {}
-  document.body.removeChild(ta);
+function downloadDocPdf(btn, filename) {
+  var original = btn.textContent;
+  btn.textContent = 'Готовим PDF…';
+  btn.disabled = true;
+  var element = document.getElementById('docPage');
+  html2pdf().set({
+    margin: 0,
+    filename: filename,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(element).save().then(function () {
+    btn.textContent = original;
+    btn.disabled = false;
+  }).catch(function () {
+    btn.textContent = 'Не удалось — попробуйте ещё раз';
+    btn.disabled = false;
+    setTimeout(function () { btn.textContent = original; }, 3000);
+  });
 }
 </script>
 </body>
