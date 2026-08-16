@@ -14,14 +14,27 @@ if (!$client) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'update') {
     $source = post('source');
+    $clientType = post('client_type') === 'legal_entity' ? 'legal_entity' : 'individual';
     $stmt = db()->prepare(
-        'UPDATE clients SET full_name = ?, phone = ?, email = ?, address = ?, notes = ?, source = ? WHERE id = ?'
+        'UPDATE clients SET full_name = ?, client_type = ?, contact_person = ?, phone = ?, email = ?,
+            address = ?, inn = ?, kpp = ?, ogrn = ?, legal_address = ?, bank_name = ?, bank_account = ?,
+            bank_bik = ?, bank_corr_account = ?, notes = ?, source = ? WHERE id = ?'
     );
     $stmt->execute([
         post('full_name'),
+        $clientType,
+        $clientType === 'legal_entity' ? (post('contact_person') ?: null) : null,
         post('phone'),
         post('email') ?: null,
         post('address') ?: null,
+        $clientType === 'legal_entity' ? (post('inn') ?: null) : null,
+        $clientType === 'legal_entity' ? (post('kpp') ?: null) : null,
+        $clientType === 'legal_entity' ? (post('ogrn') ?: null) : null,
+        $clientType === 'legal_entity' ? (post('legal_address') ?: null) : null,
+        $clientType === 'legal_entity' ? (post('bank_name') ?: null) : null,
+        $clientType === 'legal_entity' ? (post('bank_account') ?: null) : null,
+        $clientType === 'legal_entity' ? (post('bank_bik') ?: null) : null,
+        $clientType === 'legal_entity' ? (post('bank_corr_account') ?: null) : null,
         post('notes') ?: null,
         array_key_exists($source, client_sources()) ? $source : null,
         $id,
@@ -40,13 +53,14 @@ require __DIR__ . '/../src/layout_header.php';
 ?>
 
 <div class="page-title">
-  <h2><?= e($client['full_name']) ?></h2>
+  <h2><?= $client['client_type'] === 'legal_entity' ? '🏢 ' : '' ?><?= e($client['full_name']) ?></h2>
   <a href="clients.php" class="btn btn-sm">← К списку клиентов</a>
 </div>
 
 <form method="post" class="form-grid" style="max-width:640px;margin-bottom:28px;">
   <input type="hidden" name="action" value="update">
-  <label class="field full">ФИО
+  <?= render_client_type_toggle($client['client_type'] ?? 'individual') ?>
+  <label class="field full">ФИО / Название компании
     <input type="text" name="full_name" value="<?= e($client['full_name']) ?>" required>
   </label>
   <label class="field">Телефон
@@ -58,6 +72,7 @@ require __DIR__ . '/../src/layout_header.php';
   <label class="field full">Адрес
     <input type="text" name="address" value="<?= e($client['address'] ?? '') ?>">
   </label>
+  <?= render_legal_entity_fields($client) ?>
   <label class="field">Источник
     <select name="source">
       <option value="">— не указан —</option>

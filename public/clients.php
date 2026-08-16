@@ -11,14 +11,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'create') {
     $email = post('email');
     $address = post('address');
     $source = post('source');
+    $clientType = post('client_type') === 'legal_entity' ? 'legal_entity' : 'individual';
 
     if ($fullName === '' || $phone === '') {
         flash_set('Укажите имя и телефон клиента.', 'error');
     } else {
         $stmt = db()->prepare(
-            'INSERT INTO clients (full_name, phone, email, address, source) VALUES (?, ?, ?, ?, ?)'
+            'INSERT INTO clients (full_name, client_type, contact_person, phone, email, address,
+                inn, kpp, ogrn, legal_address, bank_name, bank_account, bank_bik, bank_corr_account, source)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->execute([$fullName, $phone, $email ?: null, $address ?: null, array_key_exists($source, client_sources()) ? $source : null]);
+        $stmt->execute([
+            $fullName,
+            $clientType,
+            $clientType === 'legal_entity' ? (post('contact_person') ?: null) : null,
+            $phone,
+            $email ?: null,
+            $address ?: null,
+            $clientType === 'legal_entity' ? (post('inn') ?: null) : null,
+            $clientType === 'legal_entity' ? (post('kpp') ?: null) : null,
+            $clientType === 'legal_entity' ? (post('ogrn') ?: null) : null,
+            $clientType === 'legal_entity' ? (post('legal_address') ?: null) : null,
+            $clientType === 'legal_entity' ? (post('bank_name') ?: null) : null,
+            $clientType === 'legal_entity' ? (post('bank_account') ?: null) : null,
+            $clientType === 'legal_entity' ? (post('bank_bik') ?: null) : null,
+            $clientType === 'legal_entity' ? (post('bank_corr_account') ?: null) : null,
+            array_key_exists($source, client_sources()) ? $source : null,
+        ]);
         flash_set('Клиент добавлен.', 'success');
     }
     redirect('clients.php');
@@ -51,7 +70,8 @@ require __DIR__ . '/../src/layout_header.php';
   <summary class="btn btn-primary" style="display:inline-flex;cursor:pointer;">+ Новый клиент</summary>
   <form method="post" class="form-grid" style="margin-top:16px;max-width:640px;">
     <input type="hidden" name="action" value="create">
-    <label class="field full">ФИО клиента
+    <?= render_client_type_toggle() ?>
+    <label class="field full">ФИО / Название компании
       <input type="text" name="full_name" required>
     </label>
     <label class="field">Телефон
@@ -63,6 +83,7 @@ require __DIR__ . '/../src/layout_header.php';
     <label class="field full">Адрес
       <input type="text" name="address">
     </label>
+    <?= render_legal_entity_fields() ?>
     <label class="field full">Источник
       <select name="source">
         <option value="">— не указан —</option>
@@ -95,7 +116,7 @@ require __DIR__ . '/../src/layout_header.php';
       <?php endif; ?>
       <?php foreach ($clients as $c): ?>
         <tr>
-          <td data-label="Клиент"><a href="client_view.php?id=<?= (int) $c['id'] ?>"><?= e($c['full_name']) ?></a></td>
+          <td data-label="Клиент"><a href="client_view.php?id=<?= (int) $c['id'] ?>"><?= $c['client_type'] === 'legal_entity' ? '🏢 ' : '' ?><?= e($c['full_name']) ?></a></td>
           <td data-label="Телефон"><?= e($c['phone']) ?></td>
           <td data-label="Источник"><?= e(client_source_label($c['source'] ?? null)) ?></td>
           <td data-label="Email"><?= e($c['email'] ?? '—') ?></td>

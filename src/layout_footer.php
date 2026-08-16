@@ -44,6 +44,17 @@ document.addEventListener('DOMContentLoaded', function () {
   try { saved = localStorage.getItem('avior-orders-view'); } catch (e) {}
   setOrdersView(saved === 'list' ? 'list' : 'tiles');
 });
+
+/**
+ * Переключатель типа клиента (см. render_client_type_toggle() в
+ * functions.php) — показывает/скрывает блок реквизитов компании
+ * (#legalEntityFields) при выборе «Юридическое лицо».
+ */
+function toggleClientTypeFields(radio) {
+  var block = document.getElementById('legalEntityFields');
+  if (!block) { return; }
+  block.style.display = radio.value === 'legal_entity' ? 'flex' : 'none';
+}
 </script>
 </body>
 </html>

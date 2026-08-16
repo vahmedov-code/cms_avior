@@ -20,14 +20,24 @@ CREATE TABLE IF NOT EXISTS users (
 -- Клиенты
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS clients (
-    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    full_name   VARCHAR(150) NOT NULL,
-    phone       VARCHAR(32)  NOT NULL,
-    email       VARCHAR(150) NULL,
-    address     VARCHAR(255) NULL,
-    notes       TEXT NULL,
-    source      ENUM('avito', 'yandex', '2gis', 'google_maps', 'referral', 'walkin') NULL,
-    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    full_name          VARCHAR(150) NOT NULL,
+    client_type        ENUM('individual', 'legal_entity') NOT NULL DEFAULT 'individual',
+    contact_person     VARCHAR(150) NULL,
+    phone              VARCHAR(32)  NOT NULL,
+    email              VARCHAR(150) NULL,
+    address            VARCHAR(255) NULL,
+    inn                VARCHAR(12) NULL,
+    kpp                VARCHAR(9) NULL,
+    ogrn               VARCHAR(15) NULL,
+    legal_address      VARCHAR(255) NULL,
+    bank_name          VARCHAR(150) NULL,
+    bank_account       VARCHAR(20) NULL,
+    bank_bik           VARCHAR(9) NULL,
+    bank_corr_account  VARCHAR(20) NULL,
+    notes              TEXT NULL,
+    source             ENUM('avito', 'yandex', '2gis', 'google_maps', 'referral', 'walkin') NULL,
+    created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_clients_phone (phone)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

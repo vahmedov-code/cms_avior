@@ -95,6 +95,48 @@ function client_source_label(?string $key): string
 }
 
 /**
+ * Переключатель «Физлицо / Юрлицо» — два радио-баттона, при выборе
+ * «Юрлицо» через onchange показывает блок реквизитов компании (id
+ * зафиксирован как legalEntityFields — JS-обработчик toggleClientTypeFields()
+ * в src/layout_footer.php, страница держит ровно один экземпляр, коллизий
+ * id нет).
+ */
+function render_client_type_toggle(string $current = 'individual'): string
+{
+    $ind = $current !== 'legal_entity' ? ' checked' : '';
+    $leg = $current === 'legal_entity' ? ' checked' : '';
+    return '<div class="field full" style="flex-direction:row;gap:20px;align-items:center;">'
+        . '<label style="display:flex;align-items:center;gap:6px;font-weight:normal;cursor:pointer;">'
+        . '<input type="radio" name="client_type" value="individual" onchange="toggleClientTypeFields(this)"' . $ind . '> Физическое лицо</label>'
+        . '<label style="display:flex;align-items:center;gap:6px;font-weight:normal;cursor:pointer;">'
+        . '<input type="radio" name="client_type" value="legal_entity" onchange="toggleClientTypeFields(this)"' . $leg . '> Юридическое лицо</label>'
+        . '</div>';
+}
+
+/**
+ * Блок полей реквизитов компании — скрыт по умолчанию (стиль inline,
+ * display:none), JS показывает его при выборе «Юридическое лицо».
+ * $values — текущие значения (пусто для формы создания).
+ */
+function render_legal_entity_fields(array $values = []): string
+{
+    $v = fn(string $k) => e($values[$k] ?? '');
+    $display = ($values['client_type'] ?? '') === 'legal_entity' ? '' : 'display:none;';
+    return '<div class="field full legal-entity-fields" id="legalEntityFields" style="' . $display . 'flex-direction:row;flex-wrap:wrap;gap:12px;background:#f8f9fc;border:1px solid var(--border);border-radius:8px;padding:14px;margin:4px 0;">'
+        . '<h4 style="width:100%;margin:0 0 4px;color:var(--navy);font-size:14px;">Реквизиты компании</h4>'
+        . '<label class="field" style="min-width:220px;flex:1;">Контактное лицо<input type="text" name="contact_person" value="' . $v('contact_person') . '"></label>'
+        . '<label class="field" style="min-width:140px;">ИНН<input type="text" name="inn" value="' . $v('inn') . '"></label>'
+        . '<label class="field" style="min-width:140px;">КПП<input type="text" name="kpp" value="' . $v('kpp') . '"></label>'
+        . '<label class="field" style="min-width:160px;">ОГРН<input type="text" name="ogrn" value="' . $v('ogrn') . '"></label>'
+        . '<label class="field full">Юридический адрес<input type="text" name="legal_address" value="' . $v('legal_address') . '"></label>'
+        . '<label class="field" style="min-width:220px;flex:1;">Банк<input type="text" name="bank_name" value="' . $v('bank_name') . '"></label>'
+        . '<label class="field" style="min-width:200px;">Расчётный счёт<input type="text" name="bank_account" value="' . $v('bank_account') . '"></label>'
+        . '<label class="field" style="min-width:120px;">БИК<input type="text" name="bank_bik" value="' . $v('bank_bik') . '"></label>'
+        . '<label class="field" style="min-width:200px;">Корр. счёт<input type="text" name="bank_corr_account" value="' . $v('bank_corr_account') . '"></label>'
+        . '</div>';
+}
+
+/**
  * Тип заказа — откуда он создан. Все типы попадают в общий список «Заказы».
  */
 function order_types(): array
