@@ -21,6 +21,7 @@ $pipelineProgress = $statusCounts['диагностика'] + $statusCounts['в 
 $pipelineHold = $statusCounts['согласование'];
 $pipelineReady = $statusCounts['готов'];
 $pipelineIssued = $statusCounts['выдан'];
+$pipelineRefused = $statusCounts['отказ'];
 
 require __DIR__ . '/../src/layout_header.php';
 ?>
@@ -50,6 +51,10 @@ require __DIR__ . '/../src/layout_header.php';
   <a class="pipeline-card pipeline-issued" href="repairs.php?status=выдан">
     <div class="pc-count"><?= $pipelineIssued ?></div>
     <div class="pc-label">Выданные</div>
+  </a>
+  <a class="pipeline-card pipeline-refused" href="repairs.php?status=отказ">
+    <div class="pc-count"><?= $pipelineRefused ?></div>
+    <div class="pc-label">Отказы</div>
   </a>
 </div>
 

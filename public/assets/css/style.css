@@ -294,6 +294,7 @@ tr[data-category="service"]{background:#fdf7e8;}
 .pipeline-hold{border-top-color:#8a6d1f;}
 .pipeline-ready{border-top-color:var(--good);}
 .pipeline-issued{border-top-color:#8b93a1;}
+.pipeline-refused{border-top-color:var(--danger);}
 
 /* Печать карточки заказа */
 .print-only{display:none;}
