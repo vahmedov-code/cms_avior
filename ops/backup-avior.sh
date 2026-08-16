@@ -2,7 +2,7 @@
 #
 # backup-avior.sh — единый бэкап всей инфраструктуры на VPS: база CRM,
 # её config.php (единственное, что НЕ хранится в git — там пароли),
-# и файлы сайтов (avior.moscow, shop.avior.moscow, ux-src).
+# и файлы сайтов (avior.moscow, shop.avior.moscow, ux.avior.moscow).
 #
 # Запускать по cron (пример ниже, см. docs/BACKUP.md для полной установки).
 # Бэкапы складываются локально на VPS с ротацией (хранятся $KEEP_DAYS дней)
@@ -32,8 +32,9 @@ SHOP_DB_USER=""
 SHOP_DB_PASS=""
 SHOP_PATH="/var/www/shop"       # уточнить реальный путь на сервере
 
-# ux-src — ЗАПОЛНИТЬ по аналогии, если нужен бэкап (пути/БД пока не знаем)
-# UXSRC_PATH=""
+# ux.avior.moscow — ЗАПОЛНИТЬ путь (домен известен, путь/БД на сервере пока нет):
+# UXSRC_PATH=""            # например /var/www/ux
+# UXSRC_DB_NAME=""         # если сайт использует БД
 
 # ===========================================================================
 
@@ -76,7 +77,7 @@ if [ -d "$SHOP_PATH" ]; then
     echo "  ✓ shop файлы сохранены"
 fi
 
-# --- 5. ux-src — раскомментировать и заполнить пути выше, когда понадобится ---
+# --- 5. ux.avior.moscow — раскомментировать и заполнить пути выше, когда понадобится ---
 # if [ -d "$UXSRC_PATH" ]; then
 #     tar czf uxsrc-site.tar.gz -C "$(dirname "$UXSRC_PATH")" "$(basename "$UXSRC_PATH")"
 # fi
