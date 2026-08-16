@@ -139,6 +139,13 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="module-desc">Старая автономная форма — работает без входа в CRM, но не попадает в «Заказы».</div>
     <div class="module-arrow">Открыть →</div>
   </a>
+
+  <a class="module-card" href="https://docs.google.com/spreadsheets/d/1sSuaOHN1b5xsZ6tIRaEx7q9i_FG5Z8liEM_m3pe7JRo/edit?usp=drivesdk" target="_blank" rel="noopener" style="border-style:dashed;">
+    <div class="module-icon" style="background:#eef1f8;color:var(--navy);">📊</div>
+    <div class="module-title" style="color:var(--muted);">Прайс — товары на продажу</div>
+    <div class="module-desc">Временно в Google Таблицах (б/у ноутбуки, смартфоны, комплектующие). Переедет в базу, когда заработает shop.avior.moscow.</div>
+    <div class="module-arrow">Открыть в Google Таблицах →</div>
+  </a>
 </div>
 
 <?php require __DIR__ . '/../src/layout_footer.php'; ?>
