@@ -259,7 +259,7 @@ tr[data-category="service"]{background:#fdf7e8;}
 
 /* Подсказки автозаполнения — кликабельные кнопки над textarea (там, где
    нативный <datalist> не работает), значения берутся из истории заказов. */
-.chip-suggestions{display:flex;flex-wrap:wrap;gap:6px;margin:-8px 0 12px;}
+.chip-suggestions{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px;}
 .chip-suggestions .chip{background:#f2f4f9;border-color:var(--border);color:var(--muted);}
 .chip-suggestions .chip:hover{background:#e5e9f2;color:#1c2436;}
 
