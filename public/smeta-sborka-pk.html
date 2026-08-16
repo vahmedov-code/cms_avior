@@ -371,20 +371,6 @@
   .db-empty{padding:24px 0;text-align:center;color:var(--muted);font-size:14px;}
   .db-panel-footer{padding:12px 20px;border-top:1px solid var(--border);text-align:right;}
 
-  .sheets-body{padding:18px 20px;font-size:14px;color:var(--text);}
-  .sheets-body p{margin:0 0 10px;color:var(--muted);line-height:1.5;font-size:13px;}
-  .sheets-body label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
-  .sheets-body input{
-    width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;margin-bottom:12px;
-  }
-  .sheets-status{
-    display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;border-radius:20px;margin-bottom:12px;
-  }
-  .sheets-status.on{background:#e6f4ea;color:#1e7e34;}
-  .sheets-status.off{background:#f5f0e2;color:#8a6d1f;}
-  .sheets-status .dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
-  .sheets-actions{display:flex;gap:8px;flex-wrap:wrap;}
-
   @media (max-width: 640px){
     body{padding:10px;}
     .sheet{border-radius:8px;}
@@ -480,7 +466,7 @@
       max-width:none;
     }
 
-    .sheets-body, .db-panel-footer{padding-left:16px;padding-right:16px;}
+    .db-panel-footer{padding-left:16px;padding-right:16px;}
   }
 
   @media print{
@@ -604,7 +590,6 @@
       </div>
     </div>
     <button class="action" id="dbBtn" type="button">📦 База комплектующих</button>
-    <button class="action" id="sheetsBtn" type="button">🔗 Google Sheets</button>
     <button class="action" id="newOrderBtn" type="button">🆕 Новый заказ</button>
     <button class="action warn" id="clearRowsBtn" type="button">Очистить таблицу</button>
   </div>
@@ -620,27 +605,8 @@
     </header>
     <div class="db-list" id="dbList"></div>
     <div class="db-panel-footer">
+      <button class="action" id="dbSync" type="button">🔄 Синхронизировать</button>
       <button class="action warn" id="dbClearAll" type="button">Очистить всю базу</button>
-    </div>
-  </div>
-</div>
-
-<div class="db-overlay" id="sheetsOverlay">
-  <div class="db-panel">
-    <header>
-      <h2>База в Google Sheets</h2>
-      <button id="sheetsClose" type="button">&times;</button>
-    </header>
-    <div class="sheets-body">
-      <div class="sheets-status off" id="sheetsStatus"><span class="dot"></span><span id="sheetsStatusText">Не подключено — используется локальное хранилище браузера</span></div>
-      <p>Чтобы база комплектующих хранилась в Google Sheets и была доступна с любого компьютера: создайте таблицу, откройте «Расширения → Apps Script», вставьте код из файла <b>avior-sheets-backend.gs</b> (выдан отдельно), нажмите «Развернуть → Новое развёртывание → Веб-приложение», доступ «Все», скопируйте URL веб-приложения и вставьте ниже.</p>
-      <label>URL веб-приложения Apps Script</label>
-      <input id="sheetsUrl" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
-      <div class="sheets-actions">
-        <button class="action primary" id="sheetsSave" type="button">Сохранить и подключить</button>
-        <button class="action" id="sheetsSync" type="button">Синхронизировать сейчас</button>
-        <button class="action warn" id="sheetsDisconnect" type="button">Отключить</button>
-      </div>
     </div>
   </div>
 </div>
@@ -650,7 +616,6 @@
 <script>
 (function(){
   const DB_KEY = "aviorPartsDB_v1";
-  const SHEETS_KEY = "aviorSheetsUrl_v1";
   const ORDER_COUNTER_KEY = "aviorOrderCounter_v1";
   const rowsEl = document.getElementById("rows");
   const partsListEl = document.getElementById("partsList");
@@ -690,7 +655,7 @@
     }
     saveDB(db);
     refreshDatalist();
-    pushUpsertToSheets(name, price);
+    pushUpsertToServer(name, price);
   }
   function findPart(name){
     const db = loadDB();
@@ -879,110 +844,64 @@
       saveDB(db);
       refreshDatalist();
       renderDBPanel();
-      pushDeleteToSheets(name);
+      pushDeleteToServer(name);
     }
+  });
+  document.getElementById("dbSync").addEventListener("click", ()=>{
+    syncFromServer(true).then(renderDBPanel);
   });
   document.getElementById("dbClearAll").addEventListener("click", ()=>{
     if(confirm("Полностью очистить базу сохранённых комплектующих?")){
       saveDB([]);
       refreshDatalist();
       renderDBPanel();
-      pushClearAllToSheets();
+      pushClearAllToServer();
     }
   });
 
-  // ---- Google Sheets sync ----
-  function getSheetsUrl(){
-    return (localStorage.getItem(SHEETS_KEY) || "").trim();
-  }
-  function setSheetsUrl(url){
-    localStorage.setItem(SHEETS_KEY, url.trim());
-  }
+  // ---- синхронизация с базой CRM (api/parts_catalog.php) ----
+  // Заменяет прежнюю интеграцию с Google Sheets — работает автоматически,
+  // без ручной настройки URL (тот же сервер, что отдаёт эту страницу).
+  // localStorage остаётся мгновенным локальным кэшем — форма продолжает
+  // работать даже без сети, просто без свежих данных с сервера.
+  const PARTS_API_URL = "api/parts_catalog.php";
 
-  function updateSheetsStatus(){
-    const url = getSheetsUrl();
-    const statusEl = document.getElementById("sheetsStatus");
-    const statusText = document.getElementById("sheetsStatusText");
-    if(url){
-      statusEl.classList.remove("off");
-      statusEl.classList.add("on");
-      statusText.textContent = "Подключено к Google Sheets";
-    } else {
-      statusEl.classList.remove("on");
-      statusEl.classList.add("off");
-      statusText.textContent = "Не подключено — используется локальное хранилище браузера";
-    }
-  }
-
-  function syncFromSheets(showFeedback){
-    const url = getSheetsUrl();
-    if(!url) return;
-    fetch(url)
+  function syncFromServer(showFeedback){
+    return fetch(PARTS_API_URL)
       .then(r => r.json())
       .then(data => {
         if(data && data.ok && Array.isArray(data.parts)){
           saveDB(data.parts);
           refreshDatalist();
-          if(showFeedback) showToast("Синхронизировано с Google Sheets (" + data.parts.length + " поз.)");
+          if(showFeedback) showToast("Синхронизировано с базой (" + data.parts.length + " поз.)");
         } else if(showFeedback){
-          showToast("Не удалось прочитать ответ от Google Sheets");
+          showToast("Не удалось прочитать ответ от сервера");
         }
       })
-      .catch(()=>{ if(showFeedback) showToast("Ошибка подключения к Google Sheets"); });
+      .catch(()=>{ if(showFeedback) showToast("Нет связи с сервером — работаем с локальной базой"); });
   }
 
-  function pushUpsertToSheets(name, price){
-    const url = getSheetsUrl();
-    if(!url) return;
-    fetch(url, {
+  function pushUpsertToServer(name, price){
+    fetch(PARTS_API_URL, {
       method: "POST",
-      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      headers: {"Content-Type": "application/json"},
       body: JSON.stringify({action:"upsert", name, price})
     }).catch(()=>{});
   }
-  function pushDeleteToSheets(name){
-    const url = getSheetsUrl();
-    if(!url) return;
-    fetch(url, {
+  function pushDeleteToServer(name){
+    fetch(PARTS_API_URL, {
       method: "POST",
-      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      headers: {"Content-Type": "application/json"},
       body: JSON.stringify({action:"delete", name})
     }).catch(()=>{});
   }
-  function pushClearAllToSheets(){
-    const url = getSheetsUrl();
-    if(!url) return;
-    fetch(url, {
+  function pushClearAllToServer(){
+    fetch(PARTS_API_URL, {
       method: "POST",
-      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      headers: {"Content-Type": "application/json"},
       body: JSON.stringify({action:"clearAll"})
     }).catch(()=>{});
   }
-
-  const sheetsOverlay = document.getElementById("sheetsOverlay");
-  const sheetsUrlInput = document.getElementById("sheetsUrl");
-  document.getElementById("sheetsBtn").addEventListener("click", ()=>{
-    sheetsUrlInput.value = getSheetsUrl();
-    updateSheetsStatus();
-    sheetsOverlay.classList.add("open");
-  });
-  document.getElementById("sheetsClose").addEventListener("click", ()=> sheetsOverlay.classList.remove("open"));
-  sheetsOverlay.addEventListener("click", (e)=>{ if(e.target === sheetsOverlay) sheetsOverlay.classList.remove("open"); });
-
-  document.getElementById("sheetsSave").addEventListener("click", ()=>{
-    const url = sheetsUrlInput.value.trim();
-    if(!url){ showToast("Введите URL веб-приложения"); return; }
-    setSheetsUrl(url);
-    updateSheetsStatus();
-    syncFromSheets(true);
-  });
-  document.getElementById("sheetsSync").addEventListener("click", ()=> syncFromSheets(true));
-  document.getElementById("sheetsDisconnect").addEventListener("click", ()=>{
-    setSheetsUrl("");
-    sheetsUrlInput.value = "";
-    updateSheetsStatus();
-    showToast("Google Sheets отключены, используется локальное хранилище");
-  });
 
   // ---- share ----
   function buildSummaryText(){
@@ -1110,8 +1029,7 @@
   refreshDatalist();
   addRow();
   recalcTotals();
-  updateSheetsStatus();
-  syncFromSheets(false);
+  syncFromServer(false);
 })();
 </script>
 
