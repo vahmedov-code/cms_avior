@@ -90,6 +90,10 @@ Authorization: Bearer <token>
 
 ```
 GET /api/mobile/clients.php?q=Екатерина
+GET /api/mobile/clients.php?phone=+79001234567   (точный поиск по телефону —
+                                                    для подсказки «Найден: ...»,
+                                                    сравнение по цифрам, формат
+                                                    записи не важен)
 GET /api/mobile/clients.php               (без q — последние 50)
 GET /api/mobile/clients.php?id=5          (один клиент)
 Authorization: Bearer <token>

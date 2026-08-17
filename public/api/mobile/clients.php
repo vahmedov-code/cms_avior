@@ -1,8 +1,9 @@
 <?php
 /**
- * Клиенты — GET (список/поиск/по id), POST (создание). Требует токен.
+ * Клиенты — GET (список/поиск/по id/по телефону), POST (создание). Требует токен.
  *
- * GET  /api/mobile/clients.php?q=Екатерина        — поиск по имени/телефону
+ * GET  /api/mobile/clients.php?q=Екатерина        — нечёткий поиск по имени/телефону (LIKE)
+ * GET  /api/mobile/clients.php?phone=+79001234567 — точный поиск по телефону (для подсказки «Найден: ...» при вводе)
  * GET  /api/mobile/clients.php?id=5                — один клиент
  * GET  /api/mobile/clients.php                      — последние 50
  * POST /api/mobile/clients.php  {full_name, phone, email?, address?, notes?, source?}
@@ -24,6 +25,27 @@ if ($method === 'GET') {
             api_error('Клиент не найден', 404);
         }
         api_json(['ok' => true, 'client' => $client]);
+    }
+
+    // Точный поиск по телефону (не путать с ?q= ниже — тот нечёткий,
+    // LIKE по подстроке; этот — сравнение по нормализованным цифрам,
+    // находит клиента даже если телефон записан в другом формате —
+    // "+7 900..." vs "8900..." vs "900..."). Для подсказки «Найден:
+    // ...» на экране создания заказа в приложении — см. §7
+    // PROJECT_STATE.md репозитория avior_crm_apk.
+    $phoneQuery = trim((string) ($_GET['phone'] ?? ''));
+    if ($phoneQuery !== '') {
+        $targetDigits = normalize_phone_digits($phoneQuery);
+        $found = null;
+        if ($targetDigits !== '') {
+            foreach (db()->query('SELECT * FROM clients')->fetchAll() as $row) {
+                if (normalize_phone_digits($row['phone']) === $targetDigits) {
+                    $found = $row;
+                    break;
+                }
+            }
+        }
+        api_json(['ok' => true, 'client' => $found]);
     }
 
     $q = trim((string) ($_GET['q'] ?? ''));
