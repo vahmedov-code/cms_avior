@@ -172,7 +172,7 @@ require __DIR__ . '/../src/layout_header.php';
 
 <div class="page-title">
   <h2>Заказ <?= e($repair['order_no']) ?> <span style="font-size:13px;font-weight:400;color:var(--muted);">· <?= e(order_type_label($repair['order_type'] ?? 'repair')) ?></span></h2>
-  <div style="display:flex;gap:8px;align-items:center;">
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
     <select class="btn no-print" style="cursor:pointer;" onchange="if(this.value){window.location.href=this.value;}this.selectedIndex=0;">
       <option value="">📄 Печатные документы...</option>
       <option value="repair_receipt.php?id=<?= (int) $id ?>">Квитанция о приёмке</option>
@@ -346,7 +346,7 @@ require __DIR__ . '/../src/layout_header.php';
           <div class="pay-dropdown-menu" id="offlineMenu">
             <button type="button" class="pay-dropdown-item" id="payCashBtn" onclick="closePayMenus(); payAndPrint('cash', <?= (float) ($partsTotal + $servicesTotal) ?>, <?= (int) $id ?>)">💵 Наличные (с чеком)</button>
             <div class="pay-dropdown-item" style="cursor:default;">
-              <form method="post" style="display:flex;gap:6px;align-items:center;">
+              <form method="post" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                 <input type="hidden" name="action" value="save_manual_payment">
                 <span>📥 Без чека:</span>
                 <input type="number" name="amount" min="0" step="1" value="<?= (float) ($partsTotal + $servicesTotal) ?>" style="width:90px;padding:4px 6px;">
