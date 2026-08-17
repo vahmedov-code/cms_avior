@@ -260,6 +260,22 @@ tr[data-category="service"]{background:#fdf7e8;}
 /* Подсказки автозаполнения — кликабельные кнопки над textarea (там, где
    нативный <datalist> не работает), значения берутся из истории заказов. */
 .chip-suggestions{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px;}
+
+/* Дропдауны выбора способа оплаты (repair_view.php) — свёрнутое меню под
+   каждой из двух главных кнопок (Офлайн/Безналичный). */
+.pay-dropdown{position:relative;}
+.pay-dropdown-menu{
+  display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:20;
+  background:#fff;border:1px solid var(--border);border-radius:8px;
+  box-shadow:0 6px 18px rgba(20,30,60,.14);min-width:240px;padding:6px;
+}
+.pay-dropdown-menu.open{display:block;}
+.pay-dropdown-item{
+  display:flex;align-items:center;gap:6px;width:100%;text-align:left;
+  padding:8px 10px;border:none;background:none;border-radius:6px;
+  font-size:14px;cursor:pointer;color:#1c2436;
+}
+.pay-dropdown-item:hover{background:#f2f4f9;}
 .chip-suggestions .chip{background:#f2f4f9;border-color:var(--border);color:var(--muted);}
 .chip-suggestions .chip:hover{background:#e5e9f2;color:#1c2436;}
 

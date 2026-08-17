@@ -329,25 +329,37 @@ require __DIR__ . '/../src/layout_header.php';
         Работает только с того компьютера, где физически стоит касса.
       </p>
       <div id="kkmStatus" style="display:none;font-size:13px;margin-bottom:10px;padding:8px 10px;border-radius:6px;"></div>
+
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-        <button type="button" class="btn btn-primary" id="payCashBtn" onclick="payAndPrint('cash', <?= (float) ($partsTotal + $servicesTotal) ?>, <?= (int) $id ?>)">💵 Оплата нал</button>
-        <button type="button" class="btn btn-primary" id="payCardBtn" onclick="payAndPrint('card', <?= (float) ($partsTotal + $servicesTotal) ?>, <?= (int) $id ?>)">💳 Безнал</button>
+        <div class="pay-dropdown">
+          <button type="button" class="btn btn-primary" onclick="togglePayMenu('offlineMenu')">🏦 Офлайн оплата ▾</button>
+          <div class="pay-dropdown-menu" id="offlineMenu">
+            <button type="button" class="pay-dropdown-item" id="payCashBtn" onclick="closePayMenus(); payAndPrint('cash', <?= (float) ($partsTotal + $servicesTotal) ?>, <?= (int) $id ?>)">💵 Наличные (с чеком)</button>
+            <div class="pay-dropdown-item" style="cursor:default;">
+              <form method="post" style="display:flex;gap:6px;align-items:center;">
+                <input type="hidden" name="action" value="save_manual_payment">
+                <span>📥 Без чека:</span>
+                <input type="number" name="amount" min="0" step="1" value="<?= (float) ($partsTotal + $servicesTotal) ?>" style="width:90px;padding:4px 6px;">
+                <button type="submit" class="btn btn-sm">Сохранить</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="pay-dropdown">
+          <button type="button" class="btn btn-primary" onclick="togglePayMenu('cardMenu')">💳 Безналичный ▾</button>
+          <div class="pay-dropdown-menu" id="cardMenu">
+            <button type="button" class="pay-dropdown-item" id="payCardBtn" onclick="closePayMenus(); payAndPrint('card', <?= (float) ($partsTotal + $servicesTotal) ?>, <?= (int) $id ?>)">🏧 Эквайринг</button>
+            <button type="button" class="pay-dropdown-item" disabled style="opacity:.5;cursor:not-allowed;" title="Ждём API-документацию Яндекс Сплита">🟡 Яндекс Сплит (скоро)</button>
+          </div>
+        </div>
       </div>
       <p style="font-size:11px;color:var(--muted);margin-top:-6px;margin-bottom:14px;">
-        «Безнал» печатает чек с пометкой «электронный платёж» — сама
-        оплата картой/СБП проводится на терминале Сбера отдельно,
-        нажимайте эту кнопку уже после успешной оплаты на терминале.
-      </p>
-
-      <form method="post" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:14px;">
-        <input type="hidden" name="action" value="save_manual_payment">
-        <label class="field" style="flex:1;min-width:120px;">Сумма
-          <input type="number" name="amount" min="0" step="1" value="<?= (float) ($partsTotal + $servicesTotal) ?>">
-        </label>
-        <button type="submit" class="btn">Сохранить без чека</button>
-      </form>
-      <p style="font-size:11px;color:var(--muted);margin-top:6px;">
-        Для случаев, когда деньги уже получены, а чек будет пробит отдельно.
+        «Эквайринг» и «Яндекс Сплит» печатают чек с пометкой «электронный
+        платёж» уже ПОСЛЕ того, как сама оплата прошла на терминале/в
+        приложении — нажимайте кнопку следующим шагом, не вместо оплаты.
+        «Без чека» — для случаев, когда деньги уже получены, а чек будет
+        пробит отдельно.
       </p>
     </div>
   </div>
@@ -430,6 +442,13 @@ var KKM_LOGIN = <?= json_encode(get_setting('kkm_login', 'User')) ?>;
 var KKM_PASSWORD = <?= json_encode(get_setting('kkm_password', '')) ?>;
 var KKM_NUM_DEVICE = <?= json_encode((int) (get_setting('kkm_num_device', '1'))) ?>;
 
+// Когда подключим Яндекс Сплит: перед вызовом KkmServer для этого способа
+// оплаты нужно будет добавить в CheckStrings ещё одну позицию —
+// «Расширенная гарантия» на EXTENDED_WARRANTY_PRICE (уже посчитана на
+// сервере через extended_warranty_price() в functions.php, 15% от суммы
+// позиций заказа). Готово, просто пока нигде не используется.
+var EXTENDED_WARRANTY_PRICE = <?= json_encode(extended_warranty_price($parts)) ?>;
+
 var ORDER_CHECK_STRINGS = <?= json_encode(array_map(function ($p) {
     return [
         'Register' => [
@@ -441,6 +460,19 @@ var ORDER_CHECK_STRINGS = <?= json_encode(array_map(function ($p) {
         ],
     ];
 }, $parts), JSON_UNESCAPED_UNICODE) ?>;
+
+function togglePayMenu(id) {
+  var menu = document.getElementById(id);
+  var wasOpen = menu.classList.contains('open');
+  closePayMenus();
+  if (!wasOpen) { menu.classList.add('open'); }
+}
+function closePayMenus() {
+  document.querySelectorAll('.pay-dropdown-menu.open').forEach(function (m) { m.classList.remove('open'); });
+}
+document.addEventListener('click', function (e) {
+  if (!e.target.closest('.pay-dropdown')) { closePayMenus(); }
+});
 
 function showKkmStatus(text, isError) {
   var el = document.getElementById('kkmStatus');
