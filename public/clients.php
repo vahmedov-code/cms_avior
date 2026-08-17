@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'create') {
             $fullName,
             $clientType,
             $clientType === 'legal_entity' ? (post('contact_person') ?: null) : null,
-            $phone,
+            format_phone_ru($phone),
             $email ?: null,
             $address ?: null,
             $clientType === 'legal_entity' ? (post('inn') ?: null) : null,

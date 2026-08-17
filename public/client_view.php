@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'update') {
         post('full_name'),
         $clientType,
         $clientType === 'legal_entity' ? (post('contact_person') ?: null) : null,
-        post('phone'),
+        format_phone_ru(post('phone')),
         post('email') ?: null,
         post('address') ?: null,
         $clientType === 'legal_entity' ? (post('inn') ?: null) : null,

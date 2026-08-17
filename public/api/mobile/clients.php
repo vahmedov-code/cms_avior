@@ -84,7 +84,7 @@ if ($method === 'POST') {
     $stmt = db()->prepare(
         'INSERT INTO clients (full_name, phone, email, address, notes, source) VALUES (?, ?, ?, ?, ?, ?)'
     );
-    $stmt->execute([$fullName, $phone, $email ?: null, $address ?: null, $notes ?: null, $source ?: null]);
+    $stmt->execute([$fullName, format_phone_ru($phone), $email ?: null, $address ?: null, $notes ?: null, $source ?: null]);
     $id = (int) db()->lastInsertId();
 
     $stmt = db()->prepare('SELECT * FROM clients WHERE id = ?');

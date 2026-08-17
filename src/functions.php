@@ -300,6 +300,37 @@ function normalize_phone_digits(string $phone): string
 }
 
 /**
+ * Единый формат хранения телефона — «+7 (960) 123-45-67». Раньше номера
+ * сохранялись как ввели (8960..., +7960..., 7960..., просто 9601234567)
+ * — из-за этого, например, кнопка WhatsApp в приложении не находила
+ * контакт по номеру, сохранённому с 8 в начале (обсуждали 19.08).
+ * Теперь ЛЮБОЙ телефон приводится к одному виду в момент сохранения —
+ * везде, где клиент создаётся или редактируется.
+ *
+ * Если номер не похож на российский мобильный (не 10-11 цифр с кодом
+ * 7/8, например иностранный формат) — возвращает как ввели, не портит.
+ */
+function format_phone_ru(string $raw): string
+{
+    $digits = normalize_phone_digits($raw);
+    if (strlen($digits) === 10 && $digits[0] !== '7') {
+        // Ввели без кода страны, например "960 123-45-67" — 10 цифр,
+        // начинается не с 7 (сам код 7 десятой цифрой быть не может).
+        $digits = '7' . $digits;
+    }
+    if (strlen($digits) === 11 && $digits[0] === '7') {
+        return sprintf(
+            '+7 (%s) %s-%s-%s',
+            substr($digits, 1, 3),
+            substr($digits, 4, 3),
+            substr($digits, 7, 2),
+            substr($digits, 9, 2)
+        );
+    }
+    return trim($raw);
+}
+
+/**
  * Находит клиента по телефону (сравнение по нормализованным цифрам —
  * см. normalize_phone_digits()) или создаёт нового, если не нашёл.
  * Защита от дублей клиентов (обсуждали 19.08) — используется при
@@ -324,7 +355,7 @@ function find_or_create_client(string $fullName, string $phone, ?string $source 
     }
 
     $stmt = db()->prepare('INSERT INTO clients (full_name, phone, source) VALUES (?, ?, ?)');
-    $stmt->execute([$fullName, $phone, $source]);
+    $stmt->execute([$fullName, format_phone_ru($phone), $source]);
     return (int) db()->lastInsertId();
 }
 
