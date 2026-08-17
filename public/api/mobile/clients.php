@@ -51,10 +51,16 @@ if ($method === 'GET') {
     $q = trim((string) ($_GET['q'] ?? ''));
     if ($q !== '') {
         $like = '%' . $q . '%';
-        $stmt = db()->prepare('SELECT * FROM clients WHERE full_name LIKE ? OR phone LIKE ? ORDER BY full_name LIMIT 50');
+        $stmt = db()->prepare('SELECT * FROM clients WHERE full_name LIKE ? OR phone LIKE ? ORDER BY full_name LIMIT 1000');
         $stmt->execute([$like, $like]);
     } else {
-        $stmt = db()->query('SELECT * FROM clients ORDER BY created_at DESC LIMIT 50');
+        // Раньше сортировалось по дате создания — из-за этого список без
+        // поиска выглядел «обрывающимся на середине алфавита» (упирался
+        // в лимит 50 самых свежих по дате, а не по алфавиту). Теперь
+        // единая сортировка по имени и с q, и без — список ведёт себя
+        // предсказуемо в обоих случаях, лимит поднят с 50 (при ~150-200
+        // клиентах сейчас этого хватит с запасом на годы вперёд).
+        $stmt = db()->query('SELECT * FROM clients ORDER BY full_name LIMIT 1000');
     }
     api_json(['ok' => true, 'clients' => $stmt->fetchAll()]);
 }
