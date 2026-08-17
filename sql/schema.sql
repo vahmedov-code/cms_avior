@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS clients (
     bank_bik           VARCHAR(9) NULL,
     bank_corr_account  VARCHAR(20) NULL,
     notes              TEXT NULL,
-    source             ENUM('avito', 'yandex', '2gis', 'google_maps', 'referral', 'walkin') NULL,
+    source             ENUM('avito', 'yandex', '2gis', 'google_maps', 'referral', 'walkin', 'site') NULL,
     created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_clients_phone (phone)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

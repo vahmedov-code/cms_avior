@@ -83,6 +83,7 @@ function client_sources(): array
         'google_maps' => 'Google Карты',
         'referral'    => 'Сарафанное радио',
         'walkin'      => 'С улицы',
+        'site'        => 'Заявка с сайта',
     ];
 }
 
