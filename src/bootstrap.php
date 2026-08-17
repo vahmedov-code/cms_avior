@@ -13,4 +13,5 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/sms.php';
+require_once __DIR__ . '/yandex_pay.php';
 require_once __DIR__ . '/print_templates.php';

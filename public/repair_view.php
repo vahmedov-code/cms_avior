@@ -330,6 +330,16 @@ require __DIR__ . '/../src/layout_header.php';
       </p>
       <div id="kkmStatus" style="display:none;font-size:13px;margin-bottom:10px;padding:8px 10px;border-radius:6px;"></div>
 
+      <div id="splitOverlay" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(5,7,8,.7);align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#fff;border-radius:10px;max-width:340px;width:100%;padding:24px;text-align:center;">
+          <h3 style="margin:0 0 4px;color:var(--navy);">Оплата в Яндекс Сплит</h3>
+          <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">Покажите QR-код покупателю для сканирования</p>
+          <div id="splitQrHolder" style="display:flex;justify-content:center;margin-bottom:16px;"></div>
+          <p id="splitStatusText" style="font-size:13px;color:var(--muted);margin:0 0 16px;">Ожидаем оплату…</p>
+          <button type="button" class="btn" onclick="cancelYandexSplit()">Отменить</button>
+        </div>
+      </div>
+
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
         <div class="pay-dropdown">
           <button type="button" class="btn btn-primary" onclick="togglePayMenu('offlineMenu')">🏦 Офлайн оплата ▾</button>
@@ -350,7 +360,7 @@ require __DIR__ . '/../src/layout_header.php';
           <button type="button" class="btn btn-primary" onclick="togglePayMenu('cardMenu')">💳 Безналичный ▾</button>
           <div class="pay-dropdown-menu" id="cardMenu">
             <button type="button" class="pay-dropdown-item" id="payCardBtn" onclick="closePayMenus(); payAndPrint('card', <?= (float) ($partsTotal + $servicesTotal) ?>, <?= (int) $id ?>)">🏧 Эквайринг</button>
-            <button type="button" class="pay-dropdown-item" disabled style="opacity:.5;cursor:not-allowed;" title="Ждём API-документацию Яндекс Сплита">🟡 Яндекс Сплит (скоро)</button>
+            <button type="button" class="pay-dropdown-item" id="paySplitBtn" onclick="closePayMenus(); startYandexSplit(<?= (int) $id ?>)">🟡 Яндекс Сплит</button>
           </div>
         </div>
       </div>
@@ -430,6 +440,7 @@ require __DIR__ . '/../src/layout_header.php';
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 /**
  * Оплата и печать чека через KkmServer — запрос уходит прямо из этого
@@ -482,7 +493,65 @@ function showKkmStatus(text, isError) {
   el.textContent = text;
 }
 
-function payAndPrint(method, amount, repairId) {
+var SPLIT_POLL_TIMER = null;
+var SPLIT_ORDER_ID = null;
+
+function startYandexSplit(repairId) {
+  var overlay = document.getElementById('splitOverlay');
+  var holder = document.getElementById('splitQrHolder');
+  var statusText = document.getElementById('splitStatusText');
+  holder.innerHTML = '';
+  statusText.textContent = 'Создаём заказ…';
+  overlay.style.display = 'flex';
+
+  fetch('api/yandex_split_create.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ repair_id: repairId })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (result) {
+      if (!result.ok) {
+        statusText.textContent = 'Ошибка: ' + (result.error || 'не удалось создать заказ');
+        return;
+      }
+      SPLIT_ORDER_ID = result.orderId;
+      new QRCode(holder, { text: result.paymentUrl, width: 200, height: 200 });
+      statusText.textContent = 'Ожидаем оплату…';
+      SPLIT_POLL_TIMER = setInterval(function () { pollSplitStatus(repairId); }, 2000);
+    })
+    .catch(function () {
+      statusText.textContent = 'Не удалось связаться с сервером.';
+    });
+}
+
+function pollSplitStatus(repairId) {
+  if (!SPLIT_ORDER_ID) { return; }
+  fetch('api/yandex_split_status.php?order_id=' + encodeURIComponent(SPLIT_ORDER_ID))
+    .then(function (r) { return r.json(); })
+    .then(function (result) {
+      if (!result.ok) { return; }
+      if (result.status === 'CAPTURED') {
+        clearInterval(SPLIT_POLL_TIMER);
+        document.getElementById('splitStatusText').textContent = 'Оплата прошла! Печатаем чек…';
+        var total = <?= (float) ($partsTotal + $servicesTotal) ?> + EXTENDED_WARRANTY_PRICE;
+        payAndPrint('card', total, repairId, true);
+        setTimeout(function () { document.getElementById('splitOverlay').style.display = 'none'; }, 1500);
+      } else if (result.status === 'FAILED') {
+        clearInterval(SPLIT_POLL_TIMER);
+        document.getElementById('splitStatusText').textContent = 'Оплата не прошла. Закройте окно и попробуйте снова.';
+      }
+      // PENDING — просто ждём следующего опроса
+    });
+}
+
+function cancelYandexSplit() {
+  clearInterval(SPLIT_POLL_TIMER);
+  SPLIT_ORDER_ID = null;
+  document.getElementById('splitOverlay').style.display = 'none';
+}
+
+function payAndPrint(method, amount, repairId, includeWarranty) {
   if (!ORDER_CHECK_STRINGS.length) {
     showKkmStatus('В заказе нет ни одной позиции — нечего вносить в чек.', true);
     return;
@@ -493,14 +562,29 @@ function payAndPrint(method, amount, repairId) {
   }
 
   var btn = document.getElementById(method === 'cash' ? 'payCashBtn' : 'payCardBtn');
-  btn.disabled = true;
+  if (btn) { btn.disabled = true; }
   showKkmStatus('Печатаем чек…', false);
+
+  // Копия позиций чека — не трогаем ORDER_CHECK_STRINGS напрямую, чтобы
+  // строка гарантии не осталась там для следующей оплаты без Сплита.
+  var checkStrings = ORDER_CHECK_STRINGS.slice();
+  if (includeWarranty && EXTENDED_WARRANTY_PRICE > 0) {
+    checkStrings.push({
+      Register: {
+        Name: 'Расширенная гарантия',
+        Quantity: 1,
+        Price: EXTENDED_WARRANTY_PRICE,
+        Amount: EXTENDED_WARRANTY_PRICE,
+        Tax: 20
+      }
+    });
+  }
 
   var payload = {
     Command: 'RegisterCheck',
     NumDevice: KKM_NUM_DEVICE,
     IsFiscalCheck: true,
-    CheckStrings: ORDER_CHECK_STRINGS
+    CheckStrings: checkStrings
   };
   if (method === 'cash') {
     payload.Cash = amount;
@@ -539,7 +623,7 @@ function payAndPrint(method, amount, repairId) {
       showKkmStatus('Не удалось связаться с кассой (' + err.message + '). Проверьте, что KkmServer запущен на этом компьютере и адрес в Настройках верный (попробуйте порт 5894, если 5893 не работает — вероятно, браузер блокирует http-запрос с https-страницы).', true);
     })
     .finally(function () {
-      btn.disabled = false;
+      if (btn) { btn.disabled = false; }
     });
 }
 </script>

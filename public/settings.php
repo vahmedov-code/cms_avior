@@ -55,6 +55,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'kkm_login'            => trim(post('kkm_login')),
         'kkm_password'         => trim(post('kkm_password')),
         'kkm_num_device'       => trim(post('kkm_num_device')),
+        'ypay_merchant_id'     => trim(post('ypay_merchant_id')),
+        'ypay_api_key'         => trim(post('ypay_api_key')),
+        'ypay_software_auth'   => trim(post('ypay_software_auth')),
+        'ypay_sandbox'         => post('ypay_sandbox') === '1' ? '1' : '0',
     ];
     try {
         foreach ($pairs as $key => $value) {
@@ -96,6 +100,10 @@ $currentKkmServerUrl = get_setting('kkm_server_url') ?? 'http://localhost:5893';
 $currentKkmLogin = get_setting('kkm_login') ?? 'User';
 $currentKkmPassword = get_setting('kkm_password') ?? '';
 $currentKkmNumDevice = get_setting('kkm_num_device') ?? '1';
+$currentYpayMerchantId = get_setting('ypay_merchant_id') ?? '';
+$currentYpayApiKey = get_setting('ypay_api_key') ?? '';
+$currentYpaySoftwareAuth = get_setting('ypay_software_auth') ?? '';
+$currentYpaySandbox = get_setting('ypay_sandbox') === '1';
 
 $pageTitle = 'Настройки';
 $activeNav = 'settings';
@@ -255,6 +263,28 @@ require __DIR__ . '/../src/layout_header.php';
   </label>
   <label class="field">№ устройства (NumDevice)
     <input type="text" name="kkm_num_device" value="<?= e($currentKkmNumDevice) ?>" style="max-width:100px;">
+  </label>
+
+  <h3 style="grid-column:1/-1;color:var(--navy);font-size:15px;margin:20px 0 4px;">Яндекс Пэй / Сплит (Cash Register API)</h3>
+  <p style="grid-column:1/-1;font-size:12px;color:var(--muted);margin:-6px 0 0;">
+    Нужна регистрация в личном кабинете Яндекс Пэй (console.pay.yandex.ru) —
+    заявка на подключение «QR-код от Яндекс Пэй» (поле «Кассовое ПО» —
+    выбрать «Другое»). Merchant API Key выпускается там же в Настройках,
+    Software-Authorization токен и Merchant ID выдаёт менеджер интеграции.
+    Без этих трёх значений кнопка «Яндекс Сплит» работать не будет.
+  </p>
+  <label class="field full">Merchant ID
+    <input type="text" name="ypay_merchant_id" value="<?= e($currentYpayMerchantId) ?>">
+  </label>
+  <label class="field full">Merchant API Key
+    <input type="text" name="ypay_api_key" value="<?= e($currentYpayApiKey) ?>">
+  </label>
+  <label class="field full">Software-Authorization (токен кассового ПО)
+    <input type="text" name="ypay_software_auth" value="<?= e($currentYpaySoftwareAuth) ?>">
+  </label>
+  <label class="field full" style="flex-direction:row;align-items:center;gap:8px;">
+    <input type="checkbox" name="ypay_sandbox" value="1" <?= $currentYpaySandbox ? 'checked' : '' ?>>
+    <span>Тестовая среда (sandbox) — включить на время проверки, перед боевой работой выключить</span>
   </label>
 
   <div class="field full">
