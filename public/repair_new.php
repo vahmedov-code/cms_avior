@@ -24,9 +24,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($newName === '' || $newPhone === '') {
             $error = 'Укажите имя и телефон нового клиента.';
         } else {
-            $stmt = db()->prepare('INSERT INTO clients (full_name, phone, source) VALUES (?, ?, ?)');
-            $stmt->execute([$newName, $newPhone, array_key_exists($newSource, client_sources()) ? $newSource : null]);
-            $clientId = (int) db()->lastInsertId();
+            // Та же защита от дублей, что теперь в Mobile API (обсуждали
+            // 19.08) — если клиент с таким телефоном уже есть, используем
+            // его вместо создания дубля.
+            $clientId = find_or_create_client(
+                $newName,
+                $newPhone,
+                array_key_exists($newSource, client_sources()) ? $newSource : null
+            );
         }
     } elseif (!$error) {
         $clientId = (int) post('client_id');

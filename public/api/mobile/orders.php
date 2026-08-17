@@ -147,9 +147,14 @@ if ($method === 'POST') {
         if ($newName === '' || $newPhone === '') {
             api_error('Для нового клиента укажите new_client.full_name и new_client.phone', 422);
         }
-        $stmt = db()->prepare('INSERT INTO clients (full_name, phone, source) VALUES (?, ?, ?)');
-        $stmt->execute([$newName, $newPhone, array_key_exists($newSource, client_sources()) ? $newSource : null]);
-        $clientId = (int) db()->lastInsertId();
+        // Дедупликация по телефону (обсуждали 19.08) — если клиент с
+        // таким номером уже есть в базе, используем его, не создаём
+        // дубль. См. find_or_create_client() в functions.php.
+        $clientId = find_or_create_client(
+            $newName,
+            $newPhone,
+            array_key_exists($newSource, client_sources()) ? $newSource : null
+        );
     }
 
     if ($clientId <= 0) {

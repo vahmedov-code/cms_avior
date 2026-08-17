@@ -281,6 +281,53 @@ function money_plain(float $n): string
 }
 
 /**
+ * Телефон в виде «только цифр, с 7 вместо 8 в начале» — для сравнения
+ * номеров, введённых в разных форматах («+7 900...», «8 900...»,
+ * «900...»). Раньше в проекте похожая логика была продублирована в
+ * нескольких местах (only_digits_rp/ap/os в *_public.php — те просто
+ * сверяют цифры для доступа по публичной ссылке, им 8→7 не нужен, не
+ * трогаем их отдельно). Эта функция — общая, для новых мест, где нужна
+ * настоящая дедупликация (см. find_or_create_client() ниже).
+ */
+function normalize_phone_digits(string $phone): string
+{
+    $digits = preg_replace('/\D+/', '', $phone) ?? '';
+    if ($digits !== '' && $digits[0] === '8' && strlen($digits) === 11) {
+        $digits = '7' . substr($digits, 1);
+    }
+    return $digits;
+}
+
+/**
+ * Находит клиента по телефону (сравнение по нормализованным цифрам —
+ * см. normalize_phone_digits()) или создаёт нового, если не нашёл.
+ * Защита от дублей клиентов (обсуждали 19.08) — используется при
+ * создании заказа через мобильное приложение, где выбора «существующий/
+ * новый клиент» больше нет, только поле ФИО+телефон каждый раз.
+ * Возвращает id клиента (существующего или только что созданного).
+ */
+function find_or_create_client(string $fullName, string $phone, ?string $source = null): int
+{
+    $targetDigits = normalize_phone_digits($phone);
+
+    if ($targetDigits !== '') {
+        // Небольшая база (сотни, не десятки тысяч записей) — сравнение
+        // в PHP после выборки надёжнее, чем ловить все варианты
+        // форматирования телефона прямо в SQL.
+        $stmt = db()->query('SELECT id, phone FROM clients');
+        foreach ($stmt->fetchAll() as $row) {
+            if (normalize_phone_digits($row['phone']) === $targetDigits) {
+                return (int) $row['id'];
+            }
+        }
+    }
+
+    $stmt = db()->prepare('INSERT INTO clients (full_name, phone, source) VALUES (?, ?, ?)');
+    $stmt->execute([$fullName, $phone, $source]);
+    return (int) db()->lastInsertId();
+}
+
+/**
  * Стоимость расширенной гарантии — 15% от суммы всех позиций в чеке.
  * По требованию бизнеса (обсуждали 19.08) добавляется отдельной строкой
  * в чек ТОЛЬКО при оплате через Яндекс Сплит, ни при каком другом

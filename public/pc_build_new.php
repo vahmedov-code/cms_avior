@@ -17,9 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($newName === '' || $newPhone === '') {
             $error = 'Укажите имя и телефон нового клиента.';
         } else {
-            $stmt = db()->prepare('INSERT INTO clients (full_name, phone, source) VALUES (?, ?, ?)');
-            $stmt->execute([$newName, $newPhone, array_key_exists($newSource, client_sources()) ? $newSource : null]);
-            $clientId = (int) db()->lastInsertId();
+            $clientId = find_or_create_client(
+                $newName,
+                $newPhone,
+                array_key_exists($newSource, client_sources()) ? $newSource : null
+            );
         }
     } else {
         $clientId = (int) post('client_id');
