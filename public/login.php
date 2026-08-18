@@ -7,6 +7,7 @@ if (current_user()) {
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
     $username = post('username');
     $password = $_POST['password'] ?? '';
 
@@ -41,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="flash flash-error"><?= e($error) ?></div>
       <?php endif; ?>
       <form method="post" novalidate>
+        <?= csrf_field() ?>
         <label class="field">Логин
           <input type="text" name="username" value="<?= e($username ?? '') ?>" autofocus required>
         </label>

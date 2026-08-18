@@ -9,6 +9,33 @@
 </div>
 <script>
 /**
+ * Автоматически подставляет CSRF-токен во все формы на странице
+ * (обсуждали 19.08 — защита от подделки межсайтовых запросов). Один
+ * раз при загрузке страницы, во ВСЕ <form method="post"> сразу — не
+ * нужно вручную добавлять скрытое поле в каждую форму по проекту,
+ * риск где-то забыть выше пользы. Токен берётся из meta-тега в <head>
+ * (см. layout_header.php), сама проверка — на сервере, в require_login()
+ * (auth.php). Формы внутри /api/-эндпоинтов сюда не относятся — там JS
+ * шлёт JSON через fetch(), не через <form>, эта подстановка их не
+ * касается вообще.
+ */
+document.addEventListener('DOMContentLoaded', function () {
+  var meta = document.querySelector('meta[name="csrf-token"]');
+  if (!meta) { return; }
+  var token = meta.getAttribute('content');
+  document.querySelectorAll('form').forEach(function (form) {
+    var method = (form.getAttribute('method') || '').toLowerCase();
+    if (method !== 'post') { return; }
+    if (form.querySelector('input[name="csrf_token"]')) { return; }
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'csrf_token';
+    input.value = token;
+    form.appendChild(input);
+  });
+});
+
+/**
  * Клик по карточке типа устройства (см. render_device_type_picker() в
  * functions.php): подставляет значение в текстовое поле device_type.
  * Если выбрано «Другое» — поле очищается и открывается для ручного ввода.

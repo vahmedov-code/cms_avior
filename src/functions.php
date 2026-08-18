@@ -298,6 +298,49 @@ function money_plain(float $n): string
  * PHP из соображений безопасности) — тихо возвращает пустую строку,
  * футер просто не покажет версию, страница не ломается.
  */
+/**
+ * CSRF-защита (обсуждали 19.08 — реальная дыра, закрываем). Токен —
+ * один на сессию, генерируется один раз при первом обращении и живёт,
+ * пока сотрудник не выйдет/сессия не истечёт. Автоматически проверяется
+ * в require_login() (auth.php) для ЛЮБОГО POST на обычных страницах —
+ * не нужно вручную добавлять проверку в каждый POST-обработчик по
+ * всему проекту. Сама вставка токена в формы — тоже автоматическая,
+ * через JS в layout_footer.php (ищет все <form method="post"> на
+ * странице и подставляет скрытое поле сам) — не нужно руками
+ * дописывать <?= csrf_field() ?> в каждую из ~20+ форм по проекту,
+ * риск где-то забыть был бы выше пользы.
+ *
+ * API-эндпоинты (всё под /api/ — и Bearer-токен для приложения, и
+ * JSON-эндпоинты вроде log_payment.php/yandex_split_create.php) под
+ * эту проверку НЕ попадают осознанно — они и так не полагаются на
+ * cookie-сессию классическим способом, а JS в этих местах шлёт JSON,
+ * не form-data, куда автоматическая подстановка токена всё равно не
+ * дотянется. Разделение — по пути запроса (see require_login()).
+ */
+function csrf_token(): string
+{
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function csrf_field(): string
+{
+    return '<input type="hidden" name="csrf_token" value="' . e(csrf_token()) . '">';
+}
+
+function csrf_verify(): void
+{
+    $sessionToken = $_SESSION['csrf_token'] ?? '';
+    $submittedToken = $_POST['csrf_token'] ?? '';
+    if ($sessionToken === '' || $submittedToken === '' || !hash_equals($sessionToken, $submittedToken)) {
+        flash_set('Сессия обновилась, попробуйте ещё раз.', 'error');
+        $referer = $_SERVER['HTTP_REFERER'] ?? 'index.php';
+        redirect($referer);
+    }
+}
+
 function crm_version(): string
 {
     static $cached = null;

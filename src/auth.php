@@ -11,6 +11,13 @@ function require_login(): void
     if (!current_user()) {
         redirect('login.php');
     }
+    // CSRF-проверка (обсуждали 19.08) — только POST и только вне /api/.
+    // Всё под /api/ (мобильное приложение на Bearer-токене, а также
+    // log_payment.php/yandex_split_create.php на JSON) намеренно не
+    // трогаем — см. подробный комментарий у csrf_verify() в functions.php.
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && strpos($_SERVER['SCRIPT_NAME'] ?? '', '/api/') === false) {
+        csrf_verify();
+    }
 }
 
 /**

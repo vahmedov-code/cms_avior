@@ -13,6 +13,7 @@ $user = current_user();
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e($pageTitle) ?> — АВИОР CRM</title>
+<meta name="csrf-token" content="<?= e(csrf_token()) ?>">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
