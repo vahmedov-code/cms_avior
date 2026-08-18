@@ -70,6 +70,19 @@ header{
 .topnav a:hover{background:rgba(255,255,255,.08);}
 .topnav a.active{background:rgba(255,255,255,.14);color:#fff;font-weight:600;}
 
+/* Кнопка-триггер выпадающей группы в навигации («Управление ▾») —
+   визуально неотличима от обычных ссылок .topnav a, но это <button>,
+   не <a> (открывает меню, а не переходит по ссылке напрямую). */
+.topnav .nav-dropdown-btn{
+  text-decoration:none;color:#dfe4ef;font-size:14px;padding:8px 14px;
+  border-radius:6px;transition:background .15s ease;
+  background:none;border:none;cursor:pointer;font-family:inherit;
+}
+.topnav .nav-dropdown-btn:hover{background:rgba(255,255,255,.08);}
+.topnav .nav-dropdown-btn.active{background:rgba(255,255,255,.14);color:#fff;font-weight:600;}
+.topnav .pay-dropdown{display:inline-block;}
+.topnav .pay-dropdown-menu{top:calc(100% + 6px);}
+
 .header-user{
   display:flex;
   align-items:center;

@@ -29,21 +29,22 @@ $user = current_user();
       <a href="repairs.php" class="<?= $activeNav === 'repairs' ? 'active' : '' ?>">Заказы</a>
       <a href="clients.php" class="<?= $activeNav === 'clients' ? 'active' : '' ?>">Клиенты</a>
       <?php if (is_admin()): ?>
-        <!-- Порядок ниже — как в группах плиток на панели (index.php):
-             сначала «Услуги» (тут — только SMS-рассылки, остальное в
-             этой группе не выводится в шапку), потом «Управление» в
-             том же порядке, что и там (Аналитика/Сотрудники/Финансы/
-             Склад/КУДиР — Бухгалтерия в плитках, тут просто КУДиР). -->
+        <!-- «Услуги» тут не группируем — в шапке из этой группы только
+             один пункт (SMS-рассылки), группировать нечего. «Управление»
+             — настоящая выпадающая группа, порядок пунктов внутри
+             такой же, как в одноимённой группе плиток на панели. -->
         <a href="sms_campaign.php" class="<?= $activeNav === 'sms_campaign' ? 'active' : '' ?>">SMS-рассылки</a>
-        <a href="analytics.php" class="<?= $activeNav === 'analytics' ? 'active' : '' ?>">Аналитика</a>
-      <?php endif; ?>
-      <?php if (is_owner()): ?>
-        <a href="employees.php" class="<?= $activeNav === 'employees' ? 'active' : '' ?>">Сотрудники</a>
-      <?php endif; ?>
-      <?php if (is_admin()): ?>
-        <a href="finance.php" class="<?= $activeNav === 'finance' ? 'active' : '' ?>">Финансы</a>
-        <a href="warehouse.php" class="<?= $activeNav === 'warehouse' ? 'active' : '' ?>">Склад</a>
-        <a href="kudir_export.php" class="<?= $activeNav === 'kudir' ? 'active' : '' ?>">КУДиР</a>
+        <?php $managementActive = in_array($activeNav, ['analytics', 'employees', 'finance', 'warehouse', 'kudir'], true); ?>
+        <div class="pay-dropdown">
+          <button type="button" class="nav-dropdown-btn <?= $managementActive ? 'active' : '' ?>" onclick="toggleDropdownMenu(event, 'navManagementMenu')">Управление ▾</button>
+          <div class="pay-dropdown-menu" id="navManagementMenu">
+            <a href="analytics.php" class="pay-dropdown-item">Аналитика</a>
+            <?php if (is_owner()): ?><a href="employees.php" class="pay-dropdown-item">Сотрудники</a><?php endif; ?>
+            <a href="finance.php" class="pay-dropdown-item">Финансы</a>
+            <a href="warehouse.php" class="pay-dropdown-item">Склад</a>
+            <a href="kudir_export.php" class="pay-dropdown-item">КУДиР</a>
+          </div>
+        </div>
       <?php endif; ?>
       <?php if (is_owner()): ?>
         <a href="settings.php" class="<?= $activeNav === 'settings' ? 'active' : '' ?>">Настройки</a>
@@ -52,7 +53,7 @@ $user = current_user();
     <div class="header-user">
       <?php if ($user): ?>
         <div class="pay-dropdown" style="display:inline-block;">
-          <button type="button" class="profile-menu-btn" onclick="toggleHeaderMenu(event)" style="background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;">
+          <button type="button" class="profile-menu-btn" onclick="toggleDropdownMenu(event, 'headerProfileMenu')" style="background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;">
             <?= e($user['full_name']) ?> ▾
           </button>
           <div class="pay-dropdown-menu" id="headerProfileMenu">

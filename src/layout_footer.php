@@ -115,16 +115,30 @@ function toggleModuleGroup(trigger, groupId) {
  * Клик, не наведение — hover не работает на тач-экранах, а основное
  * устройство здесь телефон.
  */
-function toggleHeaderMenu(e) {
+/**
+ * Универсальное выпадающее меню в шапке — используется и для профиля
+ * (#headerProfileMenu), и для группы «Управление» в навигации
+ * (#navManagementMenu). Открытие одного закрывает любое другое ранее
+ * открытое — в отличие от групп плиток на панели (там независимые),
+ * тут это обычное меню, так привычнее.
+ */
+function toggleDropdownMenu(e, menuId) {
   e.stopPropagation();
-  var menu = document.getElementById('headerProfileMenu');
+  var menu = document.getElementById(menuId);
   if (!menu) { return; }
-  menu.classList.toggle('open');
+  var wasOpen = menu.classList.contains('open');
+  document.querySelectorAll('.pay-dropdown-menu.open').forEach(function (m) {
+    if (m.id !== 'offlineMenu' && m.id !== 'cardMenu') { m.classList.remove('open'); }
+  });
+  if (!wasOpen) { menu.classList.add('open'); }
 }
 document.addEventListener('click', function (e) {
-  if (!e.target.closest('#headerProfileMenu') && !e.target.closest('.profile-menu-btn')) {
-    var menu = document.getElementById('headerProfileMenu');
-    if (menu) { menu.classList.remove('open'); }
+  if (!e.target.closest('#headerProfileMenu') && !e.target.closest('.profile-menu-btn')
+      && !e.target.closest('#navManagementMenu') && !e.target.closest('.nav-dropdown-btn')) {
+    var profileMenu = document.getElementById('headerProfileMenu');
+    if (profileMenu) { profileMenu.classList.remove('open'); }
+    var navMenu = document.getElementById('navManagementMenu');
+    if (navMenu) { navMenu.classList.remove('open'); }
   }
 });
 </script>
