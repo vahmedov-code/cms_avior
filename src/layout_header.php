@@ -53,7 +53,7 @@ $user = current_user();
     <div class="header-user">
       <?php if ($user): ?>
         <div class="pay-dropdown" style="display:inline-block;">
-          <button type="button" class="profile-menu-btn" onclick="toggleDropdownMenu(event, 'headerProfileMenu')" style="background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;">
+          <button type="button" class="profile-menu-btn" onclick="toggleDropdownMenu(event, 'headerProfileMenu')" style="background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;outline:none;">
             <?= e($user['full_name']) ?> ▾
           </button>
           <div class="pay-dropdown-menu" id="headerProfileMenu">

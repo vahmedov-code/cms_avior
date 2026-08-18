@@ -77,9 +77,16 @@ header{
   text-decoration:none;color:#dfe4ef;font-size:14px;padding:8px 14px;
   border-radius:6px;transition:background .15s ease;
   background:none;border:none;cursor:pointer;font-family:inherit;
+  -webkit-tap-highlight-color:transparent;outline:none;
 }
 .topnav .nav-dropdown-btn:hover{background:rgba(255,255,255,.08);}
 .topnav .nav-dropdown-btn.active{background:rgba(255,255,255,.14);color:#fff;font-weight:600;}
+/* При нажатии/в фокусе браузер по умолчанию подмешивает свою подсветку
+   у <button> (не у <a> — там такого не было) — из-за неё текст выглядел
+   тусклым. Явно задаём тот же вид, что и .active, — без этого перебивает
+   родная стилизация браузера, у каждого браузера/ОС она своя. */
+.topnav .nav-dropdown-btn:active,
+.topnav .nav-dropdown-btn:focus{background:rgba(255,255,255,.14);color:#fff;}
 .topnav .pay-dropdown{display:inline-block;}
 .topnav .pay-dropdown-menu{top:calc(100% + 6px);}
 
