@@ -276,6 +276,27 @@ tr[data-category="service"]{background:#fdf7e8;}
   font-size:14px;cursor:pointer;color:#1c2436;
 }
 .pay-dropdown-item:hover{background:#f2f4f9;}
+
+/* Раскрывающиеся группы плиток на панели (index.php) — клик по
+   родительской плитке (.module-parent) плавно разворачивает дочерние
+   (.module-children) прямо в сетке, без перехода на другую страницу.
+   max-height вместо display — так можно анимировать плавное появление
+   (display не анимируется). Значение с запасом — под любое разумное
+   число дочерних плиток, не подгоняется под реальную высоту. */
+.module-parent{cursor:pointer;}
+.module-parent .group-toggle-arrow{transition:transform .25s ease;display:inline-block;}
+.module-parent.expanded .group-toggle-arrow{transform:rotate(180deg);}
+.module-children{
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+  gap:16px;
+  max-height:0;
+  overflow:hidden;
+  opacity:0;
+  transition:max-height .35s ease, opacity .3s ease;
+}
+.module-children.open{max-height:2000px;opacity:1;margin-top:2px;}
 .chip-suggestions .chip{background:#f2f4f9;border-color:var(--border);color:var(--muted);}
 .chip-suggestions .chip:hover{background:#e5e9f2;color:#1c2436;}
 

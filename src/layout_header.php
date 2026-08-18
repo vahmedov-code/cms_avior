@@ -42,8 +42,15 @@ $user = current_user();
     </nav>
     <div class="header-user">
       <?php if ($user): ?>
-        <a href="profile.php" class="<?= $activeNav === 'profile' ? 'active' : '' ?>" style="margin-right:10px;"><?= e($user['full_name']) ?></a>
-        <a href="logout.php" class="logout-link">Выйти</a>
+        <div class="pay-dropdown" style="display:inline-block;">
+          <button type="button" class="profile-menu-btn" onclick="toggleHeaderMenu(event)" style="background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;">
+            <?= e($user['full_name']) ?> ▾
+          </button>
+          <div class="pay-dropdown-menu" id="headerProfileMenu" style="right:0;left:auto;top:calc(100% + 8px);">
+            <a href="profile.php" class="pay-dropdown-item" style="text-decoration:none;">⚙️ Настройки профиля</a>
+            <a href="logout.php" class="pay-dropdown-item" style="text-decoration:none;color:var(--danger);">🚪 Выйти</a>
+          </div>
+        </div>
       <?php endif; ?>
     </div>
   </header>

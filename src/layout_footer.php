@@ -55,6 +55,38 @@ function toggleClientTypeFields(radio) {
   if (!block) { return; }
   block.style.display = radio.value === 'legal_entity' ? 'flex' : 'none';
 }
+
+/**
+ * Раскрывающиеся группы плиток на панели (index.php) — клик по
+ * родительской плитке разворачивает дочерние прямо на месте, без
+ * перехода на другую страницу. Независимые друг от друга — открытие
+ * одной группы не закрывает остальные. До 2 уровней вложенности
+ * (Управление → Бухгалтерия → КУДиР/...).
+ */
+function toggleModuleGroup(trigger, groupId) {
+  var el = document.getElementById(groupId);
+  if (!el) { return; }
+  el.classList.toggle('open');
+  trigger.classList.toggle('expanded');
+}
+
+/**
+ * Меню профиля в шапке (клик по имени) — «Настройки профиля» и «Выйти».
+ * Клик, не наведение — hover не работает на тач-экранах, а основное
+ * устройство здесь телефон.
+ */
+function toggleHeaderMenu(e) {
+  e.stopPropagation();
+  var menu = document.getElementById('headerProfileMenu');
+  if (!menu) { return; }
+  menu.classList.toggle('open');
+}
+document.addEventListener('click', function (e) {
+  if (!e.target.closest('#headerProfileMenu') && !e.target.closest('.profile-menu-btn')) {
+    var menu = document.getElementById('headerProfileMenu');
+    if (menu) { menu.classList.remove('open'); }
+  }
+});
 </script>
 </body>
 </html>
