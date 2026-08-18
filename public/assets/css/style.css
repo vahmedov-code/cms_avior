@@ -89,6 +89,11 @@ header{
 .topnav .nav-dropdown-btn:focus{background:rgba(255,255,255,.14);color:#fff;}
 .topnav .pay-dropdown{display:inline-block;}
 .topnav .pay-dropdown-menu{top:calc(100% + 6px);}
+/* .topnav a{color:#dfe4ef} (светлый текст под тёмную шапку) иначе
+   перебивает .pay-dropdown-item по специфичности — у него выше
+   (класс+тег против одного класса), хотя сам выпадающий список уже
+   на белом фоне, не на тёмном. Тут явно возвращаем тёмный цвет. */
+.topnav .pay-dropdown-item{color:#1c2436;}
 
 .header-user{
   display:flex;
