@@ -260,35 +260,6 @@ require __DIR__ . '/../src/layout_header.php';
     <input type="text" name="bulk_sms_api_key" value="<?= e($currentBulkSmsApiKey) ?>">
   </label>
 
-  <h3 style="grid-column:1/-1;color:var(--navy);font-size:15px;margin:20px 0 4px;">Приём заявок с сайта (avior.moscow)</h3>
-  <p style="grid-column:1/-1;font-size:12px;color:var(--muted);margin:-6px 0 0;">
-    Лид-форма на avior.moscow (<code>lead.php</code>) отправляет заявки в
-    MAX-мессенджер и, если секрет ниже настроен, ОДНОВРЕМЕННО создаёт
-    новый заказ прямо в CRM (эндпоинт <code>api/lead_intake.php</code>) —
-    без ручного переноса. Секрет — общий с <code>config.php</code> сайта
-    avior.moscow (ключ <code>crm_lead_secret</code>) — если поменяете
-    здесь, обязательно обновите и там, иначе перестанет работать именно
-    вторая часть (MAX продолжит приходить в любом случае, это отдельный
-    канал).
-  </p>
-  <?php if ($currentLeadIntakeSecret): ?>
-    <div class="table-card" style="padding:14px 16px;max-width:640px;margin-bottom:12px;grid-column:1/-1;">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Текущий секрет</div>
-      <code style="word-break:break-all;font-size:13px;"><?= e($currentLeadIntakeSecret) ?></code>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:24px;grid-column:1/-1;">
-      <form method="post" onsubmit="return confirm('Старый секрет перестанет работать, заявки с сайта в CRM прекратятся, пока не обновите его и в config.php сайта. Продолжить?');">
-        <input type="hidden" name="action" value="generate_lead_secret">
-        <button type="submit" class="btn btn-sm">🔄 Перевыпустить секрет</button>
-      </form>
-    </div>
-  <?php else: ?>
-    <form method="post" style="grid-column:1/-1;margin-bottom:24px;">
-      <input type="hidden" name="action" value="generate_lead_secret">
-      <button type="submit" class="btn btn-primary btn-sm">Сгенерировать секрет</button>
-    </form>
-  <?php endif; ?>
-
   <h3 style="grid-column:1/-1;color:var(--navy);font-size:15px;margin:20px 0 4px;">Налоговая отчётность (оператор ЭДО)</h3>
   <p style="grid-column:1/-1;font-size:12px;color:var(--muted);margin:-6px 0 0;">
     Задел на будущее (обсуждали 19.08) — реальной отправки документов
@@ -360,6 +331,35 @@ require __DIR__ . '/../src/layout_header.php';
     <button type="submit" class="btn btn-primary">Сохранить настройки</button>
   </div>
 </form>
+
+<h3 style="color:var(--navy);font-size:15px;margin:28px 0 4px;">Приём заявок с сайта (avior.moscow)</h3>
+<p style="color:var(--muted);font-size:13px;max-width:640px;margin:0 0 12px;">
+  Лид-форма на avior.moscow (<code>lead.php</code>) отправляет заявки в
+  MAX-мессенджер и, если секрет ниже настроен, ОДНОВРЕМЕННО создаёт
+  новый заказ прямо в CRM (эндпоинт <code>api/lead_intake.php</code>) —
+  без ручного переноса. Секрет — общий с <code>config.php</code> сайта
+  avior.moscow (ключ <code>crm_lead_secret</code>) — если поменяете
+  здесь, обязательно обновите и там, иначе перестанет работать именно
+  вторая часть (MAX продолжит приходить в любом случае, это отдельный
+  канал).
+</p>
+<?php if ($currentLeadIntakeSecret): ?>
+  <div class="table-card" style="padding:14px 16px;max-width:640px;margin-bottom:12px;">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Текущий секрет</div>
+    <code style="word-break:break-all;font-size:13px;"><?= e($currentLeadIntakeSecret) ?></code>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:24px;">
+    <form method="post" onsubmit="return confirm('Старый секрет перестанет работать, заявки с сайта в CRM прекратятся, пока не обновите его и в config.php сайта. Продолжить?');">
+      <input type="hidden" name="action" value="generate_lead_secret">
+      <button type="submit" class="btn btn-sm">🔄 Перевыпустить секрет</button>
+    </form>
+  </div>
+<?php else: ?>
+  <form method="post" style="margin-bottom:24px;">
+    <input type="hidden" name="action" value="generate_lead_secret">
+    <button type="submit" class="btn btn-primary btn-sm">Сгенерировать секрет</button>
+  </form>
+<?php endif; ?>
 
 <h3 style="color:var(--navy);font-size:15px;margin:28px 0 4px;">AI-сводка (для анализа ассистентом)</h3>
 <p style="color:var(--muted);font-size:13px;max-width:640px;margin:0 0 12px;">
