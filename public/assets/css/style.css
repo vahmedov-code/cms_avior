@@ -297,6 +297,24 @@ tr[data-category="service"]{background:#fdf7e8;}
   transition:max-height .35s ease, opacity .3s ease;
 }
 .module-children.open{max-height:2000px;opacity:1;margin-top:2px;}
+
+/* «Fade in down» на дочерних плитках — появляются с лёгким смещением
+   сверху вниз + затуханием, каскадом одна за другой (не все разом),
+   пока раскрывается группа. Контейнер (.module-children) отвечает за
+   сам факт появления (max-height/opacity выше), а это — за то, КАК
+   именно появляется содержимое внутри. */
+@keyframes tileFadeInDown{
+  from{opacity:0;transform:translateY(-14px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.module-children.open .module-card{animation:tileFadeInDown .4s ease both;}
+.module-children.open .module-card:nth-child(1){animation-delay:.02s;}
+.module-children.open .module-card:nth-child(2){animation-delay:.06s;}
+.module-children.open .module-card:nth-child(3){animation-delay:.10s;}
+.module-children.open .module-card:nth-child(4){animation-delay:.14s;}
+.module-children.open .module-card:nth-child(5){animation-delay:.18s;}
+.module-children.open .module-card:nth-child(6){animation-delay:.22s;}
+.module-children.open .module-card:nth-child(n+7){animation-delay:.26s;}
 .chip-suggestions .chip{background:#f2f4f9;border-color:var(--border);color:var(--muted);}
 .chip-suggestions .chip:hover{background:#e5e9f2;color:#1c2436;}
 
