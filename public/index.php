@@ -167,6 +167,13 @@ require __DIR__ . '/../src/layout_header.php';
       <div class="module-arrow">Открыть →</div>
     </a>
 
+    <a class="module-card active" href="b2b_partners.php">
+      <div class="module-icon">🤝</div>
+      <div class="module-title">B2B-партнёры</div>
+      <div class="module-desc">Магазины электроники под аутсорс сложного ремонта — статусы, заготовки для контакта.</div>
+      <div class="module-arrow">Открыть →</div>
+    </a>
+
     <!-- Вложенная подгруппа «Бухгалтерия» — второй уровень раскрытия -->
     <div class="module-card module-parent active" onclick="event.stopPropagation(); toggleModuleGroup(this, 'group-accounting')">
       <div class="module-icon">📗</div>

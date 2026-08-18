@@ -35,7 +35,7 @@ $user = current_user();
              — настоящая выпадающая группа, порядок пунктов внутри
              такой же, как в одноимённой группе плиток на панели. -->
         <a href="sms_campaign.php" class="<?= $activeNav === 'sms_campaign' ? 'active' : '' ?>">SMS-рассылки</a>
-        <?php $managementActive = in_array($activeNav, ['analytics', 'employees', 'finance', 'warehouse', 'kudir'], true); ?>
+        <?php $managementActive = in_array($activeNav, ['analytics', 'employees', 'finance', 'warehouse', 'b2b_partners', 'kudir'], true); ?>
         <div class="pay-dropdown">
           <button type="button" class="nav-dropdown-btn <?= $managementActive ? 'active' : '' ?>" onclick="toggleDropdownMenu(event, 'navManagementMenu')">Управление ▾</button>
           <div class="pay-dropdown-menu" id="navManagementMenu">
@@ -43,6 +43,7 @@ $user = current_user();
             <?php if (is_owner()): ?><a href="employees.php" class="pay-dropdown-item">Сотрудники</a><?php endif; ?>
             <a href="finance.php" class="pay-dropdown-item">Финансы</a>
             <a href="warehouse.php" class="pay-dropdown-item">Склад</a>
+            <a href="b2b_partners.php" class="pay-dropdown-item">B2B-партнёры</a>
             <a href="kudir_export.php" class="pay-dropdown-item">КУДиР</a>
           </div>
         </div>

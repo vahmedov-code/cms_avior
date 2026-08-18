@@ -222,6 +222,24 @@ CREATE TABLE IF NOT EXISTS sms_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------
+-- B2B-партнёрства с магазинами электроники (аутсорс сложного ремонта)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS b2b_partners (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name            VARCHAR(200) NOT NULL,
+    address         VARCHAR(300) NULL,
+    contact_person  VARCHAR(150) NULL,
+    phone           VARCHAR(32) NULL,
+    channel         ENUM('telegram_whatsapp', 'call', 'in_person') NULL,
+    status          ENUM('not_contacted', 'contacted', 'interested', 'partner', 'declined') NOT NULL DEFAULT 'not_contacted',
+    notes           TEXT NULL,
+    last_contact_at DATE NULL,
+    created_by      INT UNSIGNED NULL,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_b2b_partners_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------
 -- Токены мобильного приложения (Android). Несколько токенов на юзера —
 -- по одному на устройство, можно отзывать по отдельности.
 -- ---------------------------------------------------------------------
