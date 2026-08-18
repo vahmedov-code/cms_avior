@@ -61,6 +61,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'bank_bik'             => trim(post('bank_bik')),
         'bank_corr_account'    => trim(post('bank_corr_account')),
         'yandex_reviews_url'   => trim(post('yandex_reviews_url')),
+        'tax_operator'         => post('tax_operator'),
+        'tax_operator_login'   => trim(post('tax_operator_login')),
+        'tax_operator_token'   => trim(post('tax_operator_token')),
         'bulk_sms_api_key'     => trim(post('bulk_sms_api_key')),
         'kkm_server_url'       => rtrim(trim(post('kkm_server_url')), '/'),
         'kkm_login'            => trim(post('kkm_login')),
@@ -107,6 +110,9 @@ $currentBankBik = get_setting('bank_bik') ?? '';
 $currentBankCorrAccount = get_setting('bank_corr_account') ?? '';
 $currentYandexReviewsUrl = get_setting('yandex_reviews_url') ?? '';
 $currentLeadIntakeSecret = get_setting('lead_intake_secret') ?? '';
+$currentTaxOperator = get_setting('tax_operator') ?? 'sbis';
+$currentTaxOperatorLogin = get_setting('tax_operator_login') ?? '';
+$currentTaxOperatorToken = get_setting('tax_operator_token') ?? '';
 $currentBulkSmsApiKey = get_setting('bulk_sms_api_key') ?? '';
 $currentKkmServerUrl = get_setting('kkm_server_url') ?? 'http://localhost:5893';
 $currentKkmLogin = get_setting('kkm_login') ?? 'User';
@@ -282,6 +288,28 @@ require __DIR__ . '/../src/layout_header.php';
       <button type="submit" class="btn btn-primary btn-sm">Сгенерировать секрет</button>
     </form>
   <?php endif; ?>
+
+  <h3 style="grid-column:1/-1;color:var(--navy);font-size:15px;margin:20px 0 4px;">Налоговая отчётность (оператор ЭДО)</h3>
+  <p style="grid-column:1/-1;font-size:12px;color:var(--muted);margin:-6px 0 0;">
+    Задел на будущее (обсуждали 19.08) — реальной отправки документов
+    через оператора пока нет, только КУДиР (раздел «КУДиР» на панели,
+    считается сама из оплат, без внешних сервисов). Когда будет готова
+    интеграция с СБИС (или другим оператором) — учётные данные уже
+    будут на месте, менять код не придётся.
+  </p>
+  <label class="field">Оператор
+    <select name="tax_operator">
+      <option value="sbis" <?= $currentTaxOperator === 'sbis' ? 'selected' : '' ?>>СБИС</option>
+      <option value="kontur" <?= $currentTaxOperator === 'kontur' ? 'selected' : '' ?>>Контур.Экстерн</option>
+      <option value="taxcom" <?= $currentTaxOperator === 'taxcom' ? 'selected' : '' ?>>Такском</option>
+    </select>
+  </label>
+  <label class="field">Логин
+    <input type="text" name="tax_operator_login" value="<?= e($currentTaxOperatorLogin) ?>">
+  </label>
+  <label class="field">Токен / пароль API
+    <input type="text" name="tax_operator_token" value="<?= e($currentTaxOperatorToken) ?>">
+  </label>
 
   <h3 style="grid-column:1/-1;color:var(--navy);font-size:15px;margin:20px 0 4px;">Касса АТОЛ (KkmServer)</h3>
   <p style="grid-column:1/-1;font-size:12px;color:var(--muted);margin:-6px 0 0;">

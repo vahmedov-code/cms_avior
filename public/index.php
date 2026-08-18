@@ -143,6 +143,13 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="module-desc">Массовая рассылка клиентам через SMS.ru — выбор получателей, история кампаний.</div>
     <div class="module-arrow">Открыть →</div>
   </a>
+
+  <a class="module-card active" href="kudir_export.php">
+    <div class="module-icon">📗</div>
+    <div class="module-title">КУДиР</div>
+    <div class="module-desc">Книга учёта доходов (ПСН) — строится сама из фактических оплат, экспорт в CSV.</div>
+    <div class="module-arrow">Открыть →</div>
+  </a>
   <?php endif; ?>
 
   <a class="module-card" href="smeta-sborka-pk.html" target="_blank" rel="noopener" style="border-style:dashed;">

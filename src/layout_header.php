@@ -31,6 +31,7 @@ $user = current_user();
       <?php if (is_admin()): ?>
         <a href="warehouse.php" class="<?= $activeNav === 'warehouse' ? 'active' : '' ?>">Склад</a>
         <a href="sms_campaign.php" class="<?= $activeNav === 'sms_campaign' ? 'active' : '' ?>">SMS-рассылки</a>
+        <a href="kudir_export.php" class="<?= $activeNav === 'kudir' ? 'active' : '' ?>">КУДиР</a>
         <a href="finance.php" class="<?= $activeNav === 'finance' ? 'active' : '' ?>">Финансы</a>
         <a href="analytics.php" class="<?= $activeNav === 'analytics' ? 'active' : '' ?>">Аналитика</a>
       <?php endif; ?>
