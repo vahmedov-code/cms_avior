@@ -46,7 +46,7 @@ $user = current_user();
           <button type="button" class="profile-menu-btn" onclick="toggleHeaderMenu(event)" style="background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;">
             <?= e($user['full_name']) ?> ▾
           </button>
-          <div class="pay-dropdown-menu" id="headerProfileMenu" style="right:0;left:auto;top:calc(100% + 8px);">
+          <div class="pay-dropdown-menu" id="headerProfileMenu">
             <a href="profile.php" class="pay-dropdown-item" style="text-decoration:none;">⚙️ Настройки профиля</a>
             <a href="logout.php" class="pay-dropdown-item" style="text-decoration:none;color:var(--danger);">🚪 Выйти</a>
           </div>

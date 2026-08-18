@@ -1,5 +1,11 @@
   </main>
-  <footer class="legal">АВИОР · Можайское шоссе, 4к1, Москва</footer>
+  <footer class="legal">
+    АВИОР · Можайское шоссе, 4к1, Москва ·
+    Разработана <a href="https://ux.avior.moscow" target="_blank" rel="noopener">ux.avior.moscow</a>
+    <?php $crmVersion = crm_version(); if ($crmVersion !== ''): ?>
+      · версия <?= e($crmVersion) ?>
+    <?php endif; ?>
+  </footer>
 </div>
 <script>
 /**

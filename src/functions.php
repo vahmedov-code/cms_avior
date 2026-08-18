@@ -290,6 +290,33 @@ function money_plain(float $n): string
  * трогаем их отдельно). Эта функция — общая, для новых мест, где нужна
  * настоящая дедупликация (см. find_or_create_client() ниже).
  */
+/**
+ * Версия CRM — считается автоматически от числа коммитов в git, вручную
+ * поднимать номер при каждом пуше не нужно (обсуждали 19.08): первый
+ * коммит = версия 1.00, каждый следующий = +0.01. Если shell_exec
+ * недоступен (некоторые хостинги отключают выполнение shell-команд из
+ * PHP из соображений безопасности) — тихо возвращает пустую строку,
+ * футер просто не покажет версию, страница не ломается.
+ */
+function crm_version(): string
+{
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+    if (!function_exists('shell_exec')) {
+        return $cached = '';
+    }
+    $repoRoot = dirname(__DIR__); // src/ -> корень репозитория, где лежит .git
+    $output = @shell_exec('git -C ' . escapeshellarg($repoRoot) . ' rev-list --count HEAD 2>/dev/null');
+    $count = (int) trim((string) $output);
+    if ($count < 1) {
+        return $cached = '';
+    }
+    $version = 1.00 + ($count - 1) * 0.01;
+    return $cached = number_format($version, 2);
+}
+
 function normalize_phone_digits(string $phone): string
 {
     $digits = preg_replace('/\D+/', '', $phone) ?? '';
