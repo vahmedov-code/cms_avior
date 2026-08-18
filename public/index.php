@@ -87,7 +87,7 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="module-icon">🧩</div>
     <div class="module-title">Услуги</div>
     <div class="module-desc">Дополнительные виды заказов и рассылки.</div>
-    <div class="module-arrow">Развернуть <span class="group-toggle-arrow">▾</span></div>
+    <div class="module-arrow"><span class="group-toggle-label">Развернуть</span> <span class="group-toggle-arrow">▾</span></div>
   </div>
   <div class="module-children" id="group-services">
     <a class="module-card active" href="account_memo_new.php">
@@ -134,7 +134,7 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="module-icon">📈</div>
     <div class="module-title">Управление</div>
     <div class="module-desc">Аналитика, сотрудники, финансы, склад, бухгалтерия.</div>
-    <div class="module-arrow">Развернуть <span class="group-toggle-arrow">▾</span></div>
+    <div class="module-arrow"><span class="group-toggle-label">Развернуть</span> <span class="group-toggle-arrow">▾</span></div>
   </div>
   <div class="module-children" id="group-management">
     <a class="module-card active" href="analytics.php">
@@ -172,7 +172,7 @@ require __DIR__ . '/../src/layout_header.php';
       <div class="module-icon">📗</div>
       <div class="module-title">Бухгалтерия</div>
       <div class="module-desc">КУДиР, автоматизация с налоговой.</div>
-      <div class="module-arrow">Развернуть <span class="group-toggle-arrow">▾</span></div>
+      <div class="module-arrow"><span class="group-toggle-label">Развернуть</span> <span class="group-toggle-arrow">▾</span></div>
     </div>
     <div class="module-children" id="group-accounting">
       <a class="module-card active" href="kudir_export.php">

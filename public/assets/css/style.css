@@ -294,9 +294,9 @@ tr[data-category="service"]{background:#fdf7e8;}
   max-height:0;
   overflow:hidden;
   opacity:0;
-  transition:max-height .35s ease, opacity .3s ease;
+  transition:max-height .4s ease, opacity .35s ease;
 }
-.module-children.open{max-height:2000px;opacity:1;margin-top:2px;}
+.module-children.open{max-height:1200px;opacity:1;margin-top:2px;}
 
 /* «Fade in down» на дочерних плитках — появляются с лёгким смещением
    сверху вниз + затуханием, каскадом одна за другой (не все разом),
@@ -327,7 +327,7 @@ tr[data-category="service"]{background:#fdf7e8;}
   from{opacity:1;transform:translateY(0);}
   to{opacity:0;transform:translateY(-14px);}
 }
-.module-children.closing .module-card{animation:tileFadeOutUp .3s ease both;}
+.module-children.closing .module-card{animation:tileFadeOutUp .4s ease both;}
 .module-children.closing .module-card:nth-last-child(1){animation-delay:.02s;}
 .module-children.closing .module-card:nth-last-child(2){animation-delay:.06s;}
 .module-children.closing .module-card:nth-last-child(3){animation-delay:.10s;}

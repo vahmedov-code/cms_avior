@@ -83,6 +83,8 @@ function toggleModuleGroup(trigger, groupId) {
   if (!el) { return; }
   trigger.classList.toggle('expanded');
 
+  var label = trigger.querySelector('.group-toggle-label');
+
   if (el._closeTimeout) {
     clearTimeout(el._closeTimeout);
     el._closeTimeout = null;
@@ -90,14 +92,21 @@ function toggleModuleGroup(trigger, groupId) {
 
   if (el.classList.contains('open')) {
     el.classList.add('closing');
+    if (label) { label.textContent = 'Развернуть'; }
+    // 650мс с запасом — анимация закрытия (fadeOutUp) идёт максимум
+    // ~580мс на самой дальней плитке (.4s + задержка каскада до .18s
+    // на группах из 5 штук), запас нужен, чтобы контейнер не начинал
+    // схлопываться раньше, чем плитки реально доиграют — раньше тут
+    // было мигание из-за слишком короткого таймера.
     el._closeTimeout = setTimeout(function () {
       el.classList.remove('open');
       el.classList.remove('closing');
       el._closeTimeout = null;
-    }, 500);
+    }, 650);
   } else {
     el.classList.remove('closing');
     el.classList.add('open');
+    if (label) { label.textContent = 'Свернуть'; }
   }
 }
 

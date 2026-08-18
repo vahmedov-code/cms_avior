@@ -29,14 +29,23 @@ $user = current_user();
       <a href="repairs.php" class="<?= $activeNav === 'repairs' ? 'active' : '' ?>">Заказы</a>
       <a href="clients.php" class="<?= $activeNav === 'clients' ? 'active' : '' ?>">Клиенты</a>
       <?php if (is_admin()): ?>
-        <a href="warehouse.php" class="<?= $activeNav === 'warehouse' ? 'active' : '' ?>">Склад</a>
+        <!-- Порядок ниже — как в группах плиток на панели (index.php):
+             сначала «Услуги» (тут — только SMS-рассылки, остальное в
+             этой группе не выводится в шапку), потом «Управление» в
+             том же порядке, что и там (Аналитика/Сотрудники/Финансы/
+             Склад/КУДиР — Бухгалтерия в плитках, тут просто КУДиР). -->
         <a href="sms_campaign.php" class="<?= $activeNav === 'sms_campaign' ? 'active' : '' ?>">SMS-рассылки</a>
-        <a href="kudir_export.php" class="<?= $activeNav === 'kudir' ? 'active' : '' ?>">КУДиР</a>
-        <a href="finance.php" class="<?= $activeNav === 'finance' ? 'active' : '' ?>">Финансы</a>
         <a href="analytics.php" class="<?= $activeNav === 'analytics' ? 'active' : '' ?>">Аналитика</a>
       <?php endif; ?>
       <?php if (is_owner()): ?>
         <a href="employees.php" class="<?= $activeNav === 'employees' ? 'active' : '' ?>">Сотрудники</a>
+      <?php endif; ?>
+      <?php if (is_admin()): ?>
+        <a href="finance.php" class="<?= $activeNav === 'finance' ? 'active' : '' ?>">Финансы</a>
+        <a href="warehouse.php" class="<?= $activeNav === 'warehouse' ? 'active' : '' ?>">Склад</a>
+        <a href="kudir_export.php" class="<?= $activeNav === 'kudir' ? 'active' : '' ?>">КУДиР</a>
+      <?php endif; ?>
+      <?php if (is_owner()): ?>
         <a href="settings.php" class="<?= $activeNav === 'settings' ? 'active' : '' ?>">Настройки</a>
       <?php endif; ?>
     </nav>
