@@ -68,12 +68,37 @@ function toggleClientTypeFields(radio) {
  * перехода на другую страницу. Независимые друг от друга — открытие
  * одной группы не закрывает остальные. До 2 уровней вложенности
  * (Управление → Бухгалтерия → КУДиР/...).
+ *
+ * Закрытие — не мгновенное: сначала ставим класс .closing (запускает
+ * fade-out-up на плитках, см. style.css), ждём, пока анимация реально
+ * доиграет, и только потом убираем .open (схлопывает сам контейнер).
+ * Иначе max-height обнулился бы сразу, и плитки пропадали бы рывком,
+ * не успев доиграть. _closeTimeout на самом элементе — защита от
+ * повторного клика посреди анимации закрытия (открыли снова раньше,
+ * чем старый таймер сработал — отменяем его, не даём случайно закрыть
+ * то, что уже открывают заново).
  */
 function toggleModuleGroup(trigger, groupId) {
   var el = document.getElementById(groupId);
   if (!el) { return; }
-  el.classList.toggle('open');
   trigger.classList.toggle('expanded');
+
+  if (el._closeTimeout) {
+    clearTimeout(el._closeTimeout);
+    el._closeTimeout = null;
+  }
+
+  if (el.classList.contains('open')) {
+    el.classList.add('closing');
+    el._closeTimeout = setTimeout(function () {
+      el.classList.remove('open');
+      el.classList.remove('closing');
+      el._closeTimeout = null;
+    }, 500);
+  } else {
+    el.classList.remove('closing');
+    el.classList.add('open');
+  }
 }
 
 /**
