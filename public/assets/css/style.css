@@ -314,7 +314,7 @@ tr[data-category="service"]{background:#fdf7e8;}
   max-height:0;
   overflow:hidden;
   opacity:0;
-  transition:max-height .4s ease, opacity .35s ease;
+  transition:max-height .7s ease, opacity .5s ease;
 }
 .module-children.open{max-height:1200px;opacity:1;margin-top:2px;}
 
