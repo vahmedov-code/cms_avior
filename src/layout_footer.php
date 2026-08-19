@@ -40,6 +40,18 @@ document.addEventListener('DOMContentLoaded', function () {
  * functions.php): подставляет значение в текстовое поле device_type.
  * Если выбрано «Другое» — поле очищается и открывается для ручного ввода.
  */
+/**
+ * Показывает/скрывает строку редактирования позиции (комплектующая/
+ * услуга) в карточке заказа — клик по карандашу разворачивает форму
+ * с текущими значениями прямо под строкой, без перехода на другую
+ * страницу.
+ */
+function toggleEditRow(partId) {
+  var row = document.getElementById('editRow' + partId);
+  if (!row) { return; }
+  row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+
 function selectDeviceType(radio, fieldId, isOther) {
   var field = document.getElementById(fieldId);
   if (!field) { return; }

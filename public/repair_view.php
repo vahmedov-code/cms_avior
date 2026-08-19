@@ -107,6 +107,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('repair_view.php?id=' . $id);
     }
 
+    if ($action === 'edit_part') {
+        $partId = (int) post('part_id');
+        $partStmt = db()->prepare('SELECT * FROM repair_parts WHERE id = ? AND repair_id = ?');
+        $partStmt->execute([$partId, $id]);
+        $oldPart = $partStmt->fetch();
+
+        if ($oldPart) {
+            $newName = trim(post('edit_name'));
+            $newQty = (float) str_replace(',', '.', post('edit_qty', '1'));
+            $newPrice = (float) str_replace(',', '.', post('edit_price', '0'));
+            $newCost = (float) str_replace(',', '.', post('edit_cost', '0'));
+            $newWarranty = trim(post('edit_warranty'));
+
+            if ($newName !== '') {
+                $stmt = db()->prepare(
+                    'UPDATE repair_parts SET name = ?, qty = ?, price = ?, cost = ?, warranty = ? WHERE id = ? AND repair_id = ?'
+                );
+                $stmt->execute([$newName, $newQty ?: 1, $newPrice, $newCost, $newWarranty ?: null, $partId, $id]);
+
+                // Склад: не считаем разницу по одному числу — если заодно
+                // поменяли и название (опечатку поправили), разница по qty
+                // была бы применена не к той позиции каталога. Проще и
+                // надёжнее: вернуть остаток по старому имени/кол-ву, потом
+                // списать заново по новому — как будто удалили и добавили.
+                if ($oldPart['category'] === 'part') {
+                    adjust_stock_for_part_usage($oldPart['name'], -(float) $oldPart['qty'], $id, 'Отредактировано в заказе ' . $repair['order_no']);
+                }
+                if ($newName !== '' && post('edit_category', $oldPart['category']) === 'part') {
+                    adjust_stock_for_part_usage($newName, $newQty ?: 1, $id, 'Отредактировано в заказе ' . $repair['order_no']);
+                }
+                flash_set('Позиция обновлена.', 'success');
+            }
+        }
+        redirect('repair_view.php?id=' . $id);
+    }
+
     if ($action === 'delete_part') {
         $partId = (int) post('part_id');
         $partStmt = db()->prepare('SELECT * FROM repair_parts WHERE id = ? AND repair_id = ?');
@@ -270,10 +306,36 @@ require __DIR__ . '/../src/layout_header.php';
               <td data-label="Гарантия"><?= $p['warranty'] ? e($p['warranty']) : '<span style="color:var(--muted);">нет</span>' ?></td>
               <td data-label="Сумма"><?= money((float) $p['qty'] * (float) $p['price']) ?></td>
               <td data-label="">
-                <form method="post" onsubmit="return confirm('Удалить позицию?');">
+                <button type="button" class="btn btn-sm" onclick="toggleEditRow(<?= (int) $p['id'] ?>)" title="Изменить">✎</button>
+                <form method="post" onsubmit="return confirm('Удалить позицию?');" style="display:inline;">
                   <input type="hidden" name="action" value="delete_part">
                   <input type="hidden" name="part_id" value="<?= (int) $p['id'] ?>">
                   <button type="submit" class="btn btn-sm btn-warn">✕</button>
+                </form>
+              </td>
+            </tr>
+            <tr id="editRow<?= (int) $p['id'] ?>" style="display:none;">
+              <td colspan="7" style="background:#f8f9fc;">
+                <form method="post" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:10px 4px;">
+                  <input type="hidden" name="action" value="edit_part">
+                  <input type="hidden" name="part_id" value="<?= (int) $p['id'] ?>">
+                  <label class="field" style="flex:2;min-width:140px;">Название
+                    <input type="text" name="edit_name" value="<?= e($p['name']) ?>" required>
+                  </label>
+                  <label class="field" style="width:80px;">Кол-во
+                    <input type="number" name="edit_qty" value="<?= (float) $p['qty'] ?>" step="0.01" min="0.01">
+                  </label>
+                  <label class="field" style="width:100px;">Цена, ₽
+                    <input type="number" name="edit_price" value="<?= (float) $p['price'] ?>" step="1" min="0">
+                  </label>
+                  <label class="field" style="width:100px;">Себест., ₽
+                    <input type="number" name="edit_cost" value="<?= (float) ($p['cost'] ?? 0) ?>" step="1" min="0">
+                  </label>
+                  <label class="field" style="width:100px;">Гарантия
+                    <input type="text" name="edit_warranty" value="<?= e($p['warranty'] ?? '') ?>">
+                  </label>
+                  <button type="submit" class="btn btn-sm btn-primary">Сохранить</button>
+                  <button type="button" class="btn btn-sm" onclick="toggleEditRow(<?= (int) $p['id'] ?>)">Отмена</button>
                 </form>
               </td>
             </tr>
