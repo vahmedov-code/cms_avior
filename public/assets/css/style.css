@@ -262,6 +262,7 @@ tbody tr:hover{background:#fafbfd;}
 .status-badge[data-status="принят"]{background:#e8eef8;color:var(--navy);}
 .status-badge[data-status="диагностика"]{background:#f5f0e2;color:#8a6d1f;}
 .status-badge[data-status="согласование"]{background:#f5f0e2;color:#8a6d1f;}
+.status-badge[data-status="ждёт детали"]{background:#fbeee0;color:#b3651e;}
 .status-badge[data-status="в ремонте"]{background:#e6f0fb;color:#1c5faa;}
 .status-badge[data-status="готов"]{background:#e6f4ea;color:var(--good);}
 .status-badge[data-status="выдан"]{background:#eef1f4;color:var(--muted);}

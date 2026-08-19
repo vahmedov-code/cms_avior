@@ -7,7 +7,7 @@ $activeNav = 'repairs';
 
 $statusFilter = get('status'); // одно значение или несколько через запятую, напр. "диагностика,в ремонте"
 $typeFilter = get('type');
-$statuses = ['принят', 'диагностика', 'согласование', 'в ремонте', 'готов', 'выдан', 'отказ'];
+$statuses = ['принят', 'диагностика', 'согласование', 'ждёт детали', 'в ремонте', 'готов', 'выдан', 'отказ'];
 $statusFilterList = $statusFilter !== ''
     ? array_values(array_intersect(explode(',', $statusFilter), $statuses))
     : [];

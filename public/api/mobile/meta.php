@@ -17,7 +17,7 @@ $deviceModels = array_column($modelsStmt->fetchAll(), 'name');
 
 api_json([
     'ok'             => true,
-    'statuses'       => ['принят', 'диагностика', 'согласование', 'в ремонте', 'готов', 'выдан', 'отказ'],
+    'statuses'       => ['принят', 'диагностика', 'согласование', 'ждёт детали', 'в ремонте', 'готов', 'выдан', 'отказ'],
     'order_types'    => order_types(),
     'client_sources' => client_sources(),
     'device_types'   => array_keys(device_type_options()),

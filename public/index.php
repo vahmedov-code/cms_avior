@@ -10,14 +10,14 @@ $clientsCount = (int) db()->query('SELECT COUNT(*) c FROM clients')->fetch()['c'
 
 // Счётчики заказов по статусным группам — для блока-конвейера на панели.
 $statusCounts = array_fill_keys(
-    ['принят', 'диагностика', 'согласование', 'в ремонте', 'готов', 'выдан', 'отказ'],
+    ['принят', 'диагностика', 'согласование', 'ждёт детали', 'в ремонте', 'готов', 'выдан', 'отказ'],
     0
 );
 foreach (db()->query('SELECT status, COUNT(*) c FROM repairs GROUP BY status') as $row) {
     $statusCounts[$row['status']] = (int) $row['c'];
 }
 $pipelineNew = $statusCounts['принят'];
-$pipelineProgress = $statusCounts['диагностика'] + $statusCounts['в ремонте'];
+$pipelineProgress = $statusCounts['диагностика'] + $statusCounts['ждёт детали'] + $statusCounts['в ремонте'];
 $pipelineHold = $statusCounts['согласование'];
 $pipelineReady = $statusCounts['готов'];
 $pipelineIssued = $statusCounts['выдан'];
@@ -36,7 +36,7 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="pc-count"><?= $pipelineNew ?></div>
     <div class="pc-label">Новые</div>
   </a>
-  <a class="pipeline-card pipeline-progress" href="repairs.php?status=<?= urlencode('диагностика,в ремонте') ?>">
+  <a class="pipeline-card pipeline-progress" href="repairs.php?status=<?= urlencode('диагностика,ждёт детали,в ремонте') ?>">
     <div class="pc-count"><?= $pipelineProgress ?></div>
     <div class="pc-label">В работе</div>
   </a>

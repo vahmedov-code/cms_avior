@@ -46,7 +46,7 @@ if (!hash_equals($configuredToken, (string) $providedToken)) {
 
 // ---- pipeline-счётчики (та же группировка, что на панели) ----
 $statusCounts = array_fill_keys(
-    ['принят', 'диагностика', 'согласование', 'в ремонте', 'готов', 'выдан', 'отказ'],
+    ['принят', 'диагностика', 'согласование', 'ждёт детали', 'в ремонте', 'готов', 'выдан', 'отказ'],
     0
 );
 foreach (db()->query('SELECT status, COUNT(*) c FROM repairs GROUP BY status') as $row) {
@@ -101,7 +101,7 @@ echo json_encode([
     'period'        => ['key' => $periodKey, 'label' => $periodLabel, 'from' => $from, 'to' => $to],
     'pipeline'      => [
         'new'        => $statusCounts['принят'],
-        'in_progress' => $statusCounts['диагностика'] + $statusCounts['в ремонте'],
+        'in_progress' => $statusCounts['диагностика'] + $statusCounts['ждёт детали'] + $statusCounts['в ремонте'],
         'on_hold'    => $statusCounts['согласование'],
         'ready'      => $statusCounts['готов'],
         'issued'     => $statusCounts['выдан'],
