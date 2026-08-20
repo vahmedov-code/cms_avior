@@ -73,30 +73,6 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="module-arrow">Открыть →</div>
   </a>
 
-  <?php if (is_owner()): ?>
-  <div class="module-card module-parent active" onclick="toggleModuleGroup(this, 'group-settings')">
-    <div class="module-icon">🛠️</div>
-    <div class="module-title">Настройки</div>
-    <div class="module-desc">Настройки CRM и внешние инструменты автоматизации.</div>
-    <div class="module-arrow"><span class="group-toggle-label">Развернуть</span> <span class="group-toggle-arrow">▾</span></div>
-  </div>
-  <div class="module-children" id="group-settings">
-    <a class="module-card active" href="settings.php">
-      <div class="module-icon">🛠️</div>
-      <div class="module-title">Настройки CRM</div>
-      <div class="module-desc">Реквизиты компании, site_url, SMS-провайдер — без правки файлов на сервере.</div>
-      <div class="module-arrow">Открыть →</div>
-    </a>
-
-    <a class="module-card active" href="https://n8n.avior.moscow" target="_blank" rel="noopener">
-      <div class="module-icon">🔗</div>
-      <div class="module-title">n8n</div>
-      <div class="module-desc">Автоматизация рабочих процессов — открывается отдельной вкладкой.</div>
-      <div class="module-arrow">Открыть →</div>
-    </a>
-  </div>
-  <?php endif; ?>
-
   <!-- ===== Группа «Услуги» — открыта всем, отдельные пункты внутри могут быть ограничены ===== -->
   <div class="module-card module-parent active" onclick="toggleModuleGroup(this, 'group-services')">
     <div class="module-icon">🧩</div>
@@ -211,6 +187,31 @@ require __DIR__ . '/../src/layout_header.php';
         <div class="module-desc">Выпуск патента, уменьшение ПСН на страховые взносы — через оператора ЭДО (СБИС).</div>
       </div>
     </div>
+  </div>
+  <?php endif; ?>
+
+  <!-- ===== Группа «Настройки» — только owner, стоит рядом с «Управление» в самом низу ===== -->
+  <?php if (is_owner()): ?>
+  <div class="module-card module-parent active" onclick="toggleModuleGroup(this, 'group-settings')">
+    <div class="module-icon">🛠️</div>
+    <div class="module-title">Настройки</div>
+    <div class="module-desc">Настройки CRM и внешние инструменты автоматизации.</div>
+    <div class="module-arrow"><span class="group-toggle-label">Развернуть</span> <span class="group-toggle-arrow">▾</span></div>
+  </div>
+  <div class="module-children" id="group-settings">
+    <a class="module-card active" href="settings.php">
+      <div class="module-icon">🛠️</div>
+      <div class="module-title">Настройки CRM</div>
+      <div class="module-desc">Реквизиты компании, site_url, SMS-провайдер — без правки файлов на сервере.</div>
+      <div class="module-arrow">Открыть →</div>
+    </a>
+
+    <a class="module-card active" href="https://n8n.avior.moscow" target="_blank" rel="noopener">
+      <div class="module-icon">🔗</div>
+      <div class="module-title">n8n</div>
+      <div class="module-desc">Автоматизация рабочих процессов — открывается отдельной вкладкой.</div>
+      <div class="module-arrow">Открыть →</div>
+    </a>
   </div>
   <?php endif; ?>
 </div>
