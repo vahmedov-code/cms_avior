@@ -62,19 +62,27 @@ switch ($period) {
 
 // ---- выручка и себестоимость по завершённым заказам (статус "выдан") ----
 $stmt = db()->prepare(
-    "SELECT rp.category, SUM(rp.qty * rp.price * (1 - COALESCE(rp.discount, 0) / 100)) AS revenue, SUM(rp.qty * rp.cost) AS cogs
+    "SELECT rp.category,
+            SUM(rp.qty * rp.price * (1 - COALESCE(rp.discount, 0) / 100)) AS revenue,
+            SUM(rp.qty * rp.cost) AS cogs,
+            SUM(rp.qty * rp.price * COALESCE(rp.discount, 0) / 100) AS discount_amount
      FROM repair_parts rp
      JOIN repairs r ON r.id = rp.repair_id
      WHERE r.status = 'выдан' AND DATE(r.created_at) BETWEEN ? AND ?
      GROUP BY rp.category"
 );
 $stmt->execute([$from, $to]);
-$revenueByCategory = ['part' => ['revenue' => 0, 'cogs' => 0], 'service' => ['revenue' => 0, 'cogs' => 0]];
+$revenueByCategory = ['part' => ['revenue' => 0, 'cogs' => 0, 'discount' => 0], 'service' => ['revenue' => 0, 'cogs' => 0, 'discount' => 0]];
 foreach ($stmt->fetchAll() as $row) {
-    $revenueByCategory[$row['category']] = ['revenue' => (float) $row['revenue'], 'cogs' => (float) $row['cogs']];
+    $revenueByCategory[$row['category']] = [
+        'revenue' => (float) $row['revenue'],
+        'cogs' => (float) $row['cogs'],
+        'discount' => (float) $row['discount_amount'],
+    ];
 }
 $totalRevenue = $revenueByCategory['part']['revenue'] + $revenueByCategory['service']['revenue'];
 $totalCogs = $revenueByCategory['part']['cogs'] + $revenueByCategory['service']['cogs'];
+$totalDiscount = $revenueByCategory['part']['discount'] + $revenueByCategory['service']['discount'];
 $grossProfit = $totalRevenue - $totalCogs;
 
 // ---- выручка по типу заказа ----
@@ -122,6 +130,10 @@ require __DIR__ . '/../src/layout_header.php';
   <div class="module-card">
     <div class="module-title" style="color:var(--muted);font-size:13px;font-weight:600;">Себестоимость</div>
     <div style="font-size:24px;font-weight:700;color:var(--muted);"><?= money($totalCogs) ?></div>
+  </div>
+  <div class="module-card">
+    <div class="module-title" style="color:var(--muted);font-size:13px;font-weight:600;">Сумма скидок</div>
+    <div style="font-size:24px;font-weight:700;color:var(--danger);"><?= money($totalDiscount) ?></div>
   </div>
   <div class="module-card">
     <div class="module-title" style="color:var(--muted);font-size:13px;font-weight:600;">Расходы</div>
