@@ -83,12 +83,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $price = (float) str_replace(',', '.', post('price', '0'));
         $cost = (float) str_replace(',', '.', post('cost', '0'));
         $warranty = post('warranty');
+        $discountRaw = post('discount', '');
+        $discount = $discountRaw === '' ? null : min(100, max(0, (float) str_replace(',', '.', $discountRaw)));
         $category = post('category') === 'service' ? 'service' : 'part';
         if ($name !== '') {
             $stmt = db()->prepare(
-                'INSERT INTO repair_parts (repair_id, category, name, qty, price, cost, warranty) VALUES (?, ?, ?, ?, ?, ?, ?)'
+                'INSERT INTO repair_parts (repair_id, category, name, qty, price, cost, warranty, discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
             );
-            $stmt->execute([$id, $category, $name, $qty ?: 1, $price, $cost, $warranty ?: null]);
+            $stmt->execute([$id, $category, $name, $qty ?: 1, $price, $cost, $warranty ?: null, $discount]);
 
             // подсказки на будущее — сохраняем в общий каталог комплектующих
             if ($category === 'part' && $price > 0) {
@@ -119,12 +121,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $newPrice = (float) str_replace(',', '.', post('edit_price', '0'));
             $newCost = (float) str_replace(',', '.', post('edit_cost', '0'));
             $newWarranty = trim(post('edit_warranty'));
+            $newDiscountRaw = post('edit_discount', '');
+            $newDiscount = $newDiscountRaw === '' ? null : min(100, max(0, (float) str_replace(',', '.', $newDiscountRaw)));
 
             if ($newName !== '') {
                 $stmt = db()->prepare(
-                    'UPDATE repair_parts SET name = ?, qty = ?, price = ?, cost = ?, warranty = ? WHERE id = ? AND repair_id = ?'
+                    'UPDATE repair_parts SET name = ?, qty = ?, price = ?, cost = ?, warranty = ?, discount = ? WHERE id = ? AND repair_id = ?'
                 );
-                $stmt->execute([$newName, $newQty ?: 1, $newPrice, $newCost, $newWarranty ?: null, $partId, $id]);
+                $stmt->execute([$newName, $newQty ?: 1, $newPrice, $newCost, $newWarranty ?: null, $newDiscount, $partId, $id]);
 
                 // Склад: не считаем разницу по одному числу — если заодно
                 // поменяли и название (опечатку поправили), разница по qty
@@ -184,8 +188,8 @@ $partsTotal = 0.0;
 $servicesTotal = 0.0;
 $marginTotal = 0.0;
 foreach ($parts as $p) {
-    $sum = (float) $p['qty'] * (float) $p['price'];
-    $marginTotal += (float) $p['qty'] * ((float) $p['price'] - (float) ($p['cost'] ?? 0));
+    $sum = part_line_total($p);
+    $marginTotal += $sum - ((float) $p['qty'] * (float) ($p['cost'] ?? 0));
     if ($p['category'] === 'service') {
         $servicesTotal += $sum;
     } else {
@@ -242,10 +246,10 @@ require __DIR__ . '/../src/layout_header.php';
     <tbody>
       <?php foreach ($parts as $p): ?>
         <tr>
-          <td style="padding:6px;border-bottom:1px solid #e5e5e5;"><?= e($p['name']) ?></td>
+          <td style="padding:6px;border-bottom:1px solid #e5e5e5;"><?= e($p['name']) ?><?php if (!empty($p['discount'])): ?> <span style="color:var(--danger);font-size:11px;">−<?= e(rtrim(rtrim((string) (float) $p['discount'], '0'), '.')) ?>%</span><?php endif; ?></td>
           <td style="padding:6px;border-bottom:1px solid #e5e5e5;text-align:center;"><?= rtrim(rtrim((string) (float) $p['qty'], '0'), '.') ?></td>
           <td style="padding:6px;border-bottom:1px solid #e5e5e5;text-align:right;"><?= money((float) $p['price']) ?></td>
-          <td style="padding:6px;border-bottom:1px solid #e5e5e5;text-align:right;"><?= money((float) $p['qty'] * (float) $p['price']) ?></td>
+          <td style="padding:6px;border-bottom:1px solid #e5e5e5;text-align:right;"><?= money(part_line_total($p)) ?></td>
         </tr>
       <?php endforeach; ?>
     </tbody>
@@ -301,10 +305,10 @@ require __DIR__ . '/../src/layout_header.php';
             <tr data-category="<?= e($p['category']) ?>">
               <td data-label="Название"><?= e($p['name']) ?></td>
               <td data-label="Кол-во"><?= rtrim(rtrim((string) (float) $p['qty'], '0'), '.') ?></td>
-              <td data-label="Цена"><?= money((float) $p['price']) ?></td>
+              <td data-label="Цена"><?= money((float) $p['price']) ?><?php if (!empty($p['discount'])): ?><br><span style="color:var(--danger);font-size:11px;">−<?= e(rtrim(rtrim((string) (float) $p['discount'], '0'), '.')) ?>% скидка</span><?php endif; ?></td>
               <td data-label="Себестоимость" style="color:var(--muted);"><?= money((float) ($p['cost'] ?? 0)) ?></td>
               <td data-label="Гарантия"><?= $p['warranty'] ? e($p['warranty']) : '<span style="color:var(--muted);">нет</span>' ?></td>
-              <td data-label="Сумма"><?= money((float) $p['qty'] * (float) $p['price']) ?></td>
+              <td data-label="Сумма"><?= money(part_line_total($p)) ?></td>
               <td data-label="">
                 <button type="button" class="btn btn-sm" onclick="toggleEditRow(<?= (int) $p['id'] ?>)" title="Изменить">✎</button>
                 <form method="post" onsubmit="return confirm('Удалить позицию?');" style="display:inline;">
@@ -333,6 +337,9 @@ require __DIR__ . '/../src/layout_header.php';
                   </label>
                   <label class="field" style="width:100px;">Гарантия
                     <input type="text" name="edit_warranty" value="<?= e($p['warranty'] ?? '') ?>">
+                  </label>
+                  <label class="field" style="width:90px;">Скидка, %
+                    <input type="number" name="edit_discount" value="<?= $p['discount'] !== null ? (float) $p['discount'] : '' ?>" min="0" max="100" step="1" placeholder="0">
                   </label>
                   <button type="submit" class="btn btn-sm btn-primary">Сохранить</button>
                   <button type="button" class="btn btn-sm" onclick="toggleEditRow(<?= (int) $p['id'] ?>)">Отмена</button>
@@ -366,6 +373,9 @@ require __DIR__ . '/../src/layout_header.php';
       </label>
       <label class="field">Гарантия (необязательно)
         <input type="text" name="warranty" placeholder="нет / 30 дней / 6 мес.">
+      </label>
+      <label class="field">Скидка, % (необязательно)
+        <input type="number" name="discount" min="0" max="100" step="1" placeholder="0">
       </label>
       <div class="field full">
         <button type="submit" class="btn">+ Добавить</button>
@@ -523,12 +533,20 @@ var KKM_NUM_DEVICE = <?= json_encode((int) (get_setting('kkm_num_device', '1')))
 var EXTENDED_WARRANTY_PRICE = <?= json_encode(extended_warranty_price($parts)) ?>;
 
 var ORDER_CHECK_STRINGS = <?= json_encode(array_map(function ($p) {
+    $lineTotal = part_line_total($p);
+    $qty = (float) $p['qty'];
+    // Цена за единицу пересчитана под скидку — касса ожидает, что
+    // Price * Quantity сходится с Amount, отдельного поля "скидка" в
+    // самой команде KkmServer не используем (надёжнее держать простое
+    // числовое соответствие, чем полагаться на не до конца проверенную
+    // поддержку скидок на стороне кассы).
+    $effectivePrice = $qty > 0 ? round($lineTotal / $qty, 2) : (float) $p['price'];
     return [
         'Register' => [
             'Name'     => $p['name'],
-            'Quantity' => (float) $p['qty'],
-            'Price'    => (float) $p['price'],
-            'Amount'   => (float) $p['qty'] * (float) $p['price'],
+            'Quantity' => $qty,
+            'Price'    => $effectivePrice,
+            'Amount'   => $lineTotal,
             'Tax'      => 20,
         ],
     ];

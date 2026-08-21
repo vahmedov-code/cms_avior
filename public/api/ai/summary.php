@@ -55,7 +55,7 @@ foreach (db()->query('SELECT status, COUNT(*) c FROM repairs GROUP BY status') a
 
 // ---- финансы за период (та же логика, что finance.php: выручка/себестоимость по заказам "выдан") ----
 $stmt = db()->prepare(
-    "SELECT rp.category, SUM(rp.qty * rp.price) AS revenue, SUM(rp.qty * rp.cost) AS cogs
+    "SELECT rp.category, SUM(rp.qty * rp.price * (1 - COALESCE(rp.discount, 0) / 100)) AS revenue, SUM(rp.qty * rp.cost) AS cogs
      FROM repair_parts rp
      JOIN repairs r ON r.id = rp.repair_id
      WHERE r.status = 'выдан' AND DATE(r.created_at) BETWEEN ? AND ?

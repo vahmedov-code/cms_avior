@@ -41,7 +41,7 @@ $totalClients = array_sum(array_column($sources, 'c'));
 
 // ---- выручка по источнику клиента (заказы со статусом "выдан") ----
 $stmt = db()->prepare(
-    "SELECT c.source, COALESCE(SUM(rp.qty * rp.price), 0) AS revenue, COUNT(DISTINCT r.id) AS orders_count
+    "SELECT c.source, COALESCE(SUM(rp.qty * rp.price * (1 - COALESCE(rp.discount, 0) / 100)), 0) AS revenue, COUNT(DISTINCT r.id) AS orders_count
      FROM clients c
      LEFT JOIN repairs r ON r.client_id = c.id AND r.status = 'выдан' AND DATE(r.created_at) BETWEEN ? AND ?
      LEFT JOIN repair_parts rp ON rp.repair_id = r.id
@@ -68,8 +68,8 @@ $totalDevices = array_sum(array_column($deviceTypes, 'c'));
 $stmt = db()->prepare(
     "SELECT r.device_type,
             COUNT(DISTINCT r.id) AS orders_count,
-            COALESCE(SUM(rp.qty * rp.price), 0) AS revenue,
-            COALESCE(SUM(rp.qty * (rp.price - rp.cost)), 0) AS margin
+            COALESCE(SUM(rp.qty * rp.price * (1 - COALESCE(rp.discount, 0) / 100)), 0) AS revenue,
+            COALESCE(SUM(rp.qty * rp.price * (1 - COALESCE(rp.discount, 0) / 100) - rp.qty * rp.cost), 0) AS margin
      FROM repairs r
      LEFT JOIN repair_parts rp ON rp.repair_id = r.id
      WHERE r.status = 'выдан' AND DATE(r.created_at) BETWEEN ? AND ?

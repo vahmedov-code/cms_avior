@@ -430,6 +430,25 @@ function find_or_create_client(string $fullName, string $phone, ?string $source 
 }
 
 /**
+ * Сумма по одной позиции заказа (комплектующая/услуга) с учётом скидки
+ * на эту позицию (обсуждали 19.08) — скидка применяется именно к
+ * позиции, не ко всему заказу целиком. discount — процент (0-100) или
+ * NULL/0, если скидки нет. Единая функция, используется везде, где
+ * считается сумма по позиции — карточка заказа, печатные документы,
+ * касса, Яндекс Сплит, финансы/аналитика — чтобы суммы не разъезжались
+ * между разными местами системы.
+ */
+function part_line_total(array $part): float
+{
+    $base = (float) $part['qty'] * (float) $part['price'];
+    $discount = (float) ($part['discount'] ?? 0);
+    if ($discount <= 0) {
+        return round($base, 2);
+    }
+    return round($base * (1 - min($discount, 100) / 100), 2);
+}
+
+/**
  * Стоимость расширенной гарантии — 15% от суммы всех позиций в чеке.
  * По требованию бизнеса (обсуждали 19.08) добавляется отдельной строкой
  * в чек ТОЛЬКО при оплате через Яндекс Сплит, ни при каком другом
@@ -445,7 +464,7 @@ function extended_warranty_price(array $parts): float
 {
     $itemsTotal = 0.0;
     foreach ($parts as $p) {
-        $itemsTotal += (float) $p['qty'] * (float) $p['price'];
+        $itemsTotal += part_line_total($p);
     }
     return round($itemsTotal * 0.15, 2);
 }

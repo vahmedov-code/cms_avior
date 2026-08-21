@@ -62,7 +62,7 @@ switch ($period) {
 
 // ---- выручка и себестоимость по завершённым заказам (статус "выдан") ----
 $stmt = db()->prepare(
-    "SELECT rp.category, SUM(rp.qty * rp.price) AS revenue, SUM(rp.qty * rp.cost) AS cogs
+    "SELECT rp.category, SUM(rp.qty * rp.price * (1 - COALESCE(rp.discount, 0) / 100)) AS revenue, SUM(rp.qty * rp.cost) AS cogs
      FROM repair_parts rp
      JOIN repairs r ON r.id = rp.repair_id
      WHERE r.status = 'выдан' AND DATE(r.created_at) BETWEEN ? AND ?
@@ -79,7 +79,7 @@ $grossProfit = $totalRevenue - $totalCogs;
 
 // ---- выручка по типу заказа ----
 $stmt = db()->prepare(
-    "SELECT r.order_type, COUNT(DISTINCT r.id) AS orders_count, COALESCE(SUM(rp.qty * rp.price), 0) AS revenue
+    "SELECT r.order_type, COUNT(DISTINCT r.id) AS orders_count, COALESCE(SUM(rp.qty * rp.price * (1 - COALESCE(rp.discount, 0) / 100)), 0) AS revenue
      FROM repairs r
      LEFT JOIN repair_parts rp ON rp.repair_id = r.id
      WHERE r.status = 'выдан' AND DATE(r.created_at) BETWEEN ? AND ?

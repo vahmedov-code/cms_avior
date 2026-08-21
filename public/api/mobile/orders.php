@@ -74,7 +74,7 @@ if ($method === 'GET') {
         }
 
         $partsStmt = db()->prepare(
-            'SELECT id, category, name, qty, price, warranty FROM repair_parts WHERE repair_id = ? ORDER BY id'
+            'SELECT id, category, name, qty, price, warranty, discount FROM repair_parts WHERE repair_id = ? ORDER BY id'
         );
         $partsStmt->execute([$id]);
         $order['parts'] = $partsStmt->fetchAll();
@@ -100,7 +100,7 @@ if ($method === 'GET') {
     $sql = "SELECT r.id, r.order_no, r.order_type, r.status, r.device_type, r.device_model,
                    r.created_at, r.updated_at, r.receipt_ready, r.public_token,
                    c.full_name AS client_name, c.phone AS client_phone,
-                   COALESCE((SELECT SUM(qty * price) FROM repair_parts WHERE repair_id = r.id), 0) AS total,
+                   COALESCE((SELECT SUM(qty * price * (1 - COALESCE(discount, 0) / 100)) FROM repair_parts WHERE repair_id = r.id), 0) AS total,
                    (SELECT COUNT(*) FROM repair_parts WHERE repair_id = r.id) AS parts_count
             FROM repairs r JOIN clients c ON c.id = r.client_id";
     $where = [];

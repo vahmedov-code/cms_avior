@@ -100,11 +100,14 @@ function render_act_page(array $repair, array $parts, bool $publicMode = false):
     $docDate = date('d.m.Y');
 
     $partsTotal = 0.0;
+    $hasAnyDiscount = false;
     foreach ($parts as $p) {
-        $partsTotal += (float) $p['qty'] * (float) $p['price'];
+        $partsTotal += part_line_total($p);
+        if (!empty($p['discount'])) {
+            $hasAnyDiscount = true;
+        }
     }
-    $discount = 0.0;
-    $total = $partsTotal - $discount;
+    $total = $partsTotal;
 
     $statusUrl = public_site_url('order_status.php?order_no=' . urlencode($repair['order_no']) . '&phone=' . urlencode($repair['client_phone']));
     $qrSrc = $statusUrl ? 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&data=' . urlencode($statusUrl) : null;
@@ -145,11 +148,11 @@ function render_act_page(array $repair, array $parts, bool $publicMode = false):
 
         <table class="items-table">
           <thead>
-            <tr><th>№</th><th>Наименование товаров и услуг</th><th>Гар-тия</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr>
+            <tr><th>№</th><th>Наименование товаров и услуг</th><th>Гар-тия</th><th>Кол-во</th><th>Цена</th><?php if ($hasAnyDiscount): ?><th>Скидка</th><?php endif; ?><th>Сумма</th></tr>
           </thead>
           <tbody>
             <?php if (!$parts): ?>
-              <tr><td colspan="6" style="text-align:center;color:#666;">Позиции не добавлены</td></tr>
+              <tr><td colspan="<?= $hasAnyDiscount ? 7 : 6 ?>" style="text-align:center;color:#666;">Позиции не добавлены</td></tr>
             <?php endif; ?>
             <?php foreach ($parts as $i => $p): ?>
               <tr>
@@ -158,15 +161,16 @@ function render_act_page(array $repair, array $parts, bool $publicMode = false):
                 <td><?= $p['warranty'] ? e($p['warranty']) : 'нет' ?></td>
                 <td><?= rtrim(rtrim((string) (float) $p['qty'], '0'), '.') ?> шт.</td>
                 <td><?= money_plain((float) $p['price']) ?></td>
-                <td><?= money_plain((float) $p['qty'] * (float) $p['price']) ?></td>
+                <?php if ($hasAnyDiscount): ?>
+                  <td><?= !empty($p['discount']) ? e(rtrim(rtrim((string) (float) $p['discount'], '0'), '.')) . '%' : '—' ?></td>
+                <?php endif; ?>
+                <td><?= money_plain(part_line_total($p)) ?></td>
               </tr>
             <?php endforeach; ?>
           </tbody>
         </table>
 
         <table class="totals-table">
-          <tr><td class="label">Сумма чека:</td><td><?= money_plain($partsTotal) ?></td></tr>
-          <tr><td class="label">Скидка:</td><td><?= money_plain($discount) ?></td></tr>
           <tr><td class="label"><strong>Итого:</strong></td><td><strong><?= money_plain($total) ?></strong></td></tr>
         </table>
 
@@ -211,12 +215,17 @@ function render_invoice_page(array $repair, array $parts, bool $publicMode = fal
     $company = company_info();
     $docDate = date('d.m.Y');
 
+    $partsTotalBeforeDiscount = 0.0;
     $partsTotal = 0.0;
+    $hasAnyDiscount = false;
     foreach ($parts as $p) {
-        $partsTotal += (float) $p['qty'] * (float) $p['price'];
+        $partsTotalBeforeDiscount += (float) $p['qty'] * (float) $p['price'];
+        $partsTotal += part_line_total($p);
+        if (!empty($p['discount'])) {
+            $hasAnyDiscount = true;
+        }
     }
-    $discount = 0.0;
-    $total = $partsTotal - $discount;
+    $total = $partsTotal;
 
     $clientLine = client_display_line($repair);
     $bankInnKpp = trim($company['inn'] . ($company['kpp'] !== '' ? ' / ' . $company['kpp'] : ''));
@@ -276,16 +285,16 @@ function render_invoice_page(array $repair, array $parts, bool $publicMode = fal
                 <td><?= rtrim(rtrim((string) (float) $p['qty'], '0'), '.') ?></td>
                 <td>шт.</td>
                 <td><?= money_plain((float) $p['price']) ?></td>
-                <td><?= money_plain(0) ?></td>
-                <td><?= money_plain((float) $p['qty'] * (float) $p['price']) ?></td>
+                <td><?= money_plain(((float) $p['qty'] * (float) $p['price']) - part_line_total($p)) ?></td>
+                <td><?= money_plain(part_line_total($p)) ?></td>
               </tr>
             <?php endforeach; ?>
           </tbody>
         </table>
 
         <table class="totals-table">
-          <tr><td class="label">Итого без учёта скидки:</td><td><?= money_plain($partsTotal) ?></td></tr>
-          <tr><td class="label">Сумма скидки:</td><td><?= money_plain($discount) ?></td></tr>
+          <tr><td class="label">Итого без учёта скидки:</td><td><?= money_plain($partsTotalBeforeDiscount) ?></td></tr>
+          <tr><td class="label">Сумма скидки:</td><td><?= money_plain($partsTotalBeforeDiscount - $total) ?></td></tr>
           <tr><td class="label"><strong>Итого к оплате:</strong></td><td><strong><?= money_plain($total) ?></strong></td></tr>
           <tr><td class="label">В том числе НДС:</td><td>Без НДС</td></tr>
         </table>

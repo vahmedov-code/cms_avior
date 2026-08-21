@@ -75,12 +75,11 @@ function yandex_pay_build_cart(array $parts, float $extendedWarrantyPrice = 0.0)
     $items = [];
     foreach ($parts as $i => $p) {
         $qty = (float) $p['qty'];
-        $price = (float) $p['price'];
         $items[] = [
             'productId' => 'part-' . ($p['id'] ?? $i),
             'title'     => mb_substr($p['name'], 0, 100),
             'quantity'  => ['count' => (string) $qty],
-            'total'     => (string) round($qty * $price, 2),
+            'total'     => (string) part_line_total($p),
         ];
     }
     if ($extendedWarrantyPrice > 0) {

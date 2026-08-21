@@ -71,7 +71,7 @@ if ($q !== '') {
 }
 
 $sql = "SELECT r.*, c.full_name AS client_name, c.phone AS client_phone,
-               COALESCE((SELECT SUM(qty * price) FROM repair_parts WHERE repair_id = r.id), 0) AS parts_total
+               COALESCE((SELECT SUM(qty * price * (1 - COALESCE(discount, 0) / 100)) FROM repair_parts WHERE repair_id = r.id), 0) AS parts_total
         FROM repairs r JOIN clients c ON c.id = r.client_id";
 $where = [];
 $params = [];
