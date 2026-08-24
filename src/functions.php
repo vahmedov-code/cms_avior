@@ -84,6 +84,7 @@ function client_sources(): array
         'referral'    => 'Сарафанное радио',
         'walkin'      => 'С улицы',
         'site'        => 'Заявка с сайта',
+        'regular'     => 'Постоянный клиент',
     ];
 }
 
