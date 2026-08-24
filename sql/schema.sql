@@ -255,6 +255,22 @@ CREATE TABLE IF NOT EXISTS api_tokens (
     CONSTRAINT fk_api_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ---------------------------------------------------------------------
+-- Вход по отпечатку пальца / Face ID (WebAuthn) — привязанные устройства
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS webauthn_credentials (
+    id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id        INT UNSIGNED NOT NULL,
+    credential_id  VARCHAR(255) NOT NULL,   -- base64url, ID ключа от браузера
+    public_key     TEXT NOT NULL,           -- публичный ключ в формате PEM
+    sign_count     INT UNSIGNED NOT NULL DEFAULT 0,  -- защита от клонирования ключа
+    device_label   VARCHAR(100) NULL,       -- "iPhone Вейса" и т.п., вводит сам пользователь
+    created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_used_at   DATETIME NULL,
+    CONSTRAINT fk_webauthn_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE INDEX idx_webauthn_credential_id (credential_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- Примечание: администратора CMS создавать НЕ здесь.

@@ -15,3 +15,4 @@ require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/sms.php';
 require_once __DIR__ . '/yandex_pay.php';
 require_once __DIR__ . '/print_templates.php';
+require_once __DIR__ . '/webauthn_helpers.php';
