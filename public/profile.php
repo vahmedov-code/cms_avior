@@ -193,6 +193,9 @@ function webauthnRegister() {
       if (!res.ok) { throw new Error(res.error || 'Не удалось привязать устройство'); }
       msgEl.style.color = 'var(--good, green)';
       msgEl.textContent = res.message;
+      // чтобы на login.php логин на этом телефоне сразу подставился
+      // и не пришлось ещё раз входить паролем перед первым отпечатком
+      try { window.localStorage.setItem('avior_last_username', <?= json_encode($me['username']) ?>); } catch (e) {}
       setTimeout(function () { window.location.reload(); }, 800);
     })
     .catch(function (err) {

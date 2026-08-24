@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php if ($error): ?>
         <div class="flash flash-error"><?= e($error) ?></div>
       <?php endif; ?>
-      <form method="post" novalidate>
+      <form method="post" novalidate id="loginForm">
         <?= csrf_field() ?>
         <label class="field">Логин
           <input type="text" name="username" id="loginUsername" value="<?= e($username ?? '') ?>" autofocus required>
@@ -75,10 +75,36 @@ function bufToB64url(buf) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-  if (window.PublicKeyCredential) {
-    document.getElementById('webauthnLoginBtn').style.display = 'block';
+  // Подставляем логин, сохранённый на этом устройстве после прошлого
+  // успешного входа (localStorage — только локально в этом браузере,
+  // никуда не отправляется), чтобы не вводить его руками каждый раз.
+  var usernameField = document.getElementById('loginUsername');
+  var savedUsername = window.localStorage.getItem('avior_last_username');
+  if (savedUsername && !usernameField.value) {
+    usernameField.value = savedUsername;
   }
+
+  if (window.PublicKeyCredential) {
+    var btn = document.getElementById('webauthnLoginBtn');
+    btn.style.display = 'block';
+    // Если логин уже известен — сразу фокус на кнопку отпечатка,
+    // чтобы можно было просто нажать Enter/тапнуть, не трогая поля.
+    if (usernameField.value) {
+      btn.focus();
+    }
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', function () {
+    var typed = usernameField.value.trim();
+    if (typed) { webauthnSaveUsername(typed); }
+  });
 });
+
+function webauthnSaveUsername(username) {
+  try {
+    window.localStorage.setItem('avior_last_username', username);
+  } catch (e) { /* localStorage недоступен (приватный режим и т.п.) — не критично */ }
+}
 
 function webauthnLogin() {
   var msgEl = document.getElementById('webauthnLoginMsg');
@@ -124,6 +150,7 @@ function webauthnLogin() {
     .then(function (r) { return r.json(); })
     .then(function (res) {
       if (!res.ok) { throw new Error(res.error || 'Не удалось войти'); }
+      webauthnSaveUsername(username);
       window.location.href = res.redirect || 'index.php';
     })
     .catch(function (err) {
