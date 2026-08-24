@@ -36,6 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'delete_expense'
 $period = get('period', 'month');
 $today = new DateTime();
 switch ($period) {
+    case 'today':
+        $from = $today->format('Y-m-d');
+        $to = $today->format('Y-m-d');
+        $periodLabel = 'Сегодня';
+        break;
     case 'last_month':
         $from = (new DateTime('first day of last month'))->format('Y-m-d');
         $to = (new DateTime('last day of last month'))->format('Y-m-d');
@@ -110,6 +115,7 @@ require __DIR__ . '/../src/layout_header.php';
 <div class="page-title">
   <h2>Финансы</h2>
   <div style="display:flex;gap:6px;">
+    <a href="finance.php?period=today" class="btn btn-sm <?= $period === 'today' ? 'btn-primary' : '' ?>">Сегодня</a>
     <a href="finance.php?period=month" class="btn btn-sm <?= $period === 'month' ? 'btn-primary' : '' ?>">Этот месяц</a>
     <a href="finance.php?period=last_month" class="btn btn-sm <?= $period === 'last_month' ? 'btn-primary' : '' ?>">Прошлый месяц</a>
     <a href="finance.php?period=year" class="btn btn-sm <?= $period === 'year' ? 'btn-primary' : '' ?>">Этот год</a>
