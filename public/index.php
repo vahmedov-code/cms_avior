@@ -119,6 +119,22 @@ require __DIR__ . '/../src/layout_header.php';
     </a>
   </div>
 
+  <!-- ===== Группа «Инструменты» — рабочие справочники мастера ===== -->
+  <div class="module-card module-parent active" onclick="toggleModuleGroup(this, 'group-tools')">
+    <div class="module-icon">🧰</div>
+    <div class="module-title">Инструменты</div>
+    <div class="module-desc">Справочники и утилиты для работы с техникой.</div>
+    <div class="module-arrow"><span class="group-toggle-label">Развернуть</span> <span class="group-toggle-arrow">▾</span></div>
+  </div>
+  <div class="module-children" id="group-tools">
+    <a class="module-card active" href="board_library.php">
+      <div class="module-icon">🔧</div>
+      <div class="module-title">Библиотека плат</div>
+      <div class="module-desc">Фото плат с метками номиналов — сопротивления дросселей и других компонентов по моделям.</div>
+      <div class="module-arrow">Открыть →</div>
+    </a>
+  </div>
+
   <!-- ===== Группа «Управление» — только admin/owner (все пункты внутри и так ограничены) ===== -->
   <?php if (is_admin()): ?>
   <div class="module-card module-parent active" onclick="toggleModuleGroup(this, 'group-management')">

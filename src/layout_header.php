@@ -35,6 +35,7 @@ $user = current_user();
              — настоящая выпадающая группа, порядок пунктов внутри
              такой же, как в одноимённой группе плиток на панели. -->
         <a href="sms_campaign.php" class="<?= $activeNav === 'sms_campaign' ? 'active' : '' ?>">SMS-рассылки</a>
+        <a href="board_library.php" class="<?= $activeNav === 'board_library' ? 'active' : '' ?>">Платы</a>
         <?php $managementActive = in_array($activeNav, ['analytics', 'employees', 'finance', 'warehouse', 'b2b_partners', 'kudir'], true); ?>
         <div class="pay-dropdown">
           <button type="button" class="nav-dropdown-btn <?= $managementActive ? 'active' : '' ?>" onclick="toggleDropdownMenu(event, 'navManagementMenu')">Управление ▾</button>
