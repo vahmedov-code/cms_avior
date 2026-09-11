@@ -36,6 +36,8 @@ function board_store_upload(array $file, string $subdir, ?string &$error = null)
         return null;
     }
 
+    board_optimize_image($dir . '/' . $name, $allowed[$mime]);
+
     return 'uploads/' . $subdir . '/' . $name;
 }
 
@@ -244,4 +246,68 @@ function render_marker_editor_assets(): string
 </script>
     <?php
     return (string) ob_get_clean();
+}
+
+/**
+ * Ужимает загруженное фото: длинная сторона не больше $maxSide,
+ * JPEG с качеством $quality, разворот по EXIF (иначе снимки с телефона
+ * ложатся боком). Для разметки плат 2400px достаточно — мелкая
+ * маркировка на компонентах читается, а вес падает в разы.
+ *
+ * Если GD недоступен или что-то пошло не так — оригинал остаётся как есть.
+ */
+function board_optimize_image(string $fullPath, string $ext, int $maxSide = 2400, int $quality = 85): void
+{
+    if (!extension_loaded('gd') || !is_file($fullPath)) {
+        return;
+    }
+
+    $info = @getimagesize($fullPath);
+    if (!$info) {
+        return;
+    }
+    [$width, $height] = $info;
+
+    $src = null;
+    if ($ext === 'jpg') {
+        $src = @imagecreatefromjpeg($fullPath);
+    } elseif ($ext === 'png') {
+        $src = @imagecreatefrompng($fullPath);
+    } elseif ($ext === 'webp' && function_exists('imagecreatefromwebp')) {
+        $src = @imagecreatefromwebp($fullPath);
+    }
+    if (!$src) {
+        return;
+    }
+
+    // Разворот по EXIF до ресайза.
+    if ($ext === 'jpg' && function_exists('exif_read_data')) {
+        $exif = @exif_read_data($fullPath);
+        $orientation = $exif['Orientation'] ?? 0;
+        if ($orientation === 3) {
+            $src = imagerotate($src, 180, 0);
+        } elseif ($orientation === 6) {
+            $src = imagerotate($src, -90, 0);
+            [$width, $height] = [$height, $width];
+        } elseif ($orientation === 8) {
+            $src = imagerotate($src, 90, 0);
+            [$width, $height] = [$height, $width];
+        }
+    }
+
+    $longest = max($width, $height);
+    if ($longest > $maxSide) {
+        $scale = $maxSide / $longest;
+        $newW = (int) round($width * $scale);
+        $newH = (int) round($height * $scale);
+        $dst = imagecreatetruecolor($newW, $newH);
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $width, $height);
+        imagedestroy($src);
+        $src = $dst;
+    }
+
+    // Всё сохраняем как JPEG — для фото плат прозрачность не нужна,
+    // а PNG со снимка весит кратно больше.
+    imagejpeg($src, $fullPath, $quality);
+    imagedestroy($src);
 }
