@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/blog.php';
+require_once __DIR__.'/site_sitemap.php';
 
 function blog_link(string $url): string {
     if(preg_match('~^/(?!/)[a-zA-Z0-9/_#?=&.%-]*$~D',$url))return $url;
@@ -108,12 +109,7 @@ function blog_build(): void {
     // These staging directories contain only publishable content, never drafts.
     try{
         blog_render_tree($posts,$stage);
-        $xml=new DOMDocument();if(!$xml->load($root.'/sitemap.xml',LIBXML_NONET))throw new RuntimeException('Не удалось прочитать sitemap.xml.');
-        $xpath=new DOMXPath($xml);$xpath->registerNamespace('s','http://www.sitemaps.org/schemas/sitemap/0.9');$base=rtrim($cfg['site_url'],'/');
-        foreach($xpath->query('//s:url') as $node){$loc=$node->getElementsByTagName('loc')->item(0)?->textContent??'';if(str_starts_with($loc,$base.'/blog/'))$node->parentNode->removeChild($node);}
-        $urls=[$base.'/blog/'=>null];foreach($posts as $p)$urls[$base.'/blog/'.$p['slug'].'/']=substr($p['modified_at'],0,10);
-        foreach($urls as $url=>$date){$node=$xml->createElementNS('http://www.sitemaps.org/schemas/sitemap/0.9','url');$loc=$xml->createElement('loc');$loc->appendChild($xml->createTextNode($url));$node->appendChild($loc);if($date)$node->appendChild($xml->createElement('lastmod',$date));$xml->documentElement->appendChild($node);}
-        blog_put($stage.'/sitemap.next',$xml->saveXML());
+        blog_put($stage.'/sitemap.next',site_sitemap_xml($root,$cfg['site_url'],$stage));
         if(is_dir($target)&&!rename($target,$backup))throw new RuntimeException('Не удалось сохранить предыдущую версию блога.');
         if(!rename($stage,$target)){if(is_dir($backup))rename($backup,$target);throw new RuntimeException('Не удалось опубликовать новую версию.');}
         if(!rename($target.'/sitemap.next',$root.'/sitemap.xml')){blog_remove_tree($target);if(is_dir($backup))rename($backup,$target);throw new RuntimeException('Не удалось обновить sitemap.');}

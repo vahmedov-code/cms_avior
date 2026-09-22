@@ -5,8 +5,10 @@ $site=realpath($argv[1]??'');$out=$argv[2]??'';
 if(!$site||!is_file($site.'/index.html')||$out===''||file_exists($out))throw new RuntimeException('Provide site checkout and a NEW preview directory.');
 mkdir($out,0700,true);$out=realpath($out);$crm=dirname(__DIR__);
 function cp_tree(string $src,string $dest):void{if(!is_dir($dest))mkdir($dest,0755,true);foreach(new DirectoryIterator($src)as$f){if($f->isDot()||$f->getFilename()==='.git'||$f->getFilename()==='.github')continue;$target=$dest.'/'.$f->getFilename();if($f->isDir())cp_tree($f->getPathname(),$target);else copy($f->getPathname(),$target);}}
-cp_tree($site,$out.'/site');mkdir($out.'/crm/src',0700,true);mkdir($out.'/crm/config',0700,true);mkdir($out.'/crm/public',0700,true);mkdir($out.'/private',0700,true);
-foreach(['auth.php','functions.php','layout_header.php','layout_footer.php','blog.php','blog_render.php','blog_admin.php']as$f)copy($crm.'/src/'.$f,$out.'/crm/src/'.$f);
+cp_tree($site,$out.'/site');
+foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($out.'/site',FilesystemIterator::SKIP_DOTS)) as $f){if($f->isFile()&&$f->getExtension()==='html')file_put_contents($f->getPathname(),str_replace('rel="canonical" href="https://avior.moscow','rel="canonical" href="http://127.0.0.1:4176',file_get_contents($f->getPathname())));}
+mkdir($out.'/crm/src',0700,true);mkdir($out.'/crm/config',0700,true);mkdir($out.'/crm/public',0700,true);mkdir($out.'/private',0700,true);
+foreach(['auth.php','functions.php','layout_header.php','layout_footer.php','blog.php','blog_render.php','site_sitemap.php','blog_admin.php']as$f)copy($crm.'/src/'.$f,$out.'/crm/src/'.$f);
 foreach(['blog.php','blog_edit.php','blog_preview.php','blog_media.php','blog_access.php']as$f)copy($crm.'/public/'.$f,$out.'/crm/public/'.$f);
 mkdir($out.'/crm/public/api/ai',0700,true);copy($crm.'/public/api/ai/blog.php',$out.'/crm/public/api/ai/blog.php');
 cp_tree($crm.'/public/assets',$out.'/crm/public/assets');

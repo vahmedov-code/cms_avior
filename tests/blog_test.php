@@ -3,6 +3,7 @@
 if(PHP_SAPI!=='cli')exit(1);
 $dir=realpath($argv[1]??'');if(!$dir||!is_file($dir.'/login.txt'))throw new RuntimeException('Isolated fixture required');
 require $dir.'/crm/src/bootstrap.php';require $dir.'/crm/src/blog_render.php';
+$robotsFile=blog_config()['site_root'].'/robots.txt';$previewRobots=file_get_contents($robotsFile);file_put_contents($robotsFile,"User-agent: *\nAllow: /\n");
 $checks=0;function check(bool $ok,string $label):void{global $checks;if(!$ok)throw new RuntimeException('FAIL '.$label);echo 'PASS '.$label."\n";$checks++;}
 function rejects(callable $fn,string $label):void{try{$fn();}catch(Throwable $e){check(true,$label);return;}check(false,$label);}
 $initial=db()->query('SELECT * FROM blog_posts ORDER BY id')->fetchAll();
@@ -30,4 +31,5 @@ $temp=$dir.'/pagination-check';blog_render_tree($synthetic,$temp,true);check(is_
 db()->exec('DELETE FROM blog_posts');foreach($initial as $p){$keys=array_keys($p);db()->prepare('INSERT INTO blog_posts ('.implode(',',$keys).') VALUES ('.implode(',',array_fill(0,count($keys),'?')).')')->execute(array_values($p));}
 blog_lock(fn()=>blog_build());
 $drafts=array_map(fn($p)=>blog_snapshot($p,blog_now()),$initial);blog_remove_tree(blog_config()['site_root'].'/blog');blog_render_tree($drafts,blog_config()['site_root'].'/blog',true);
+file_put_contents($robotsFile,$previewRobots);
 echo "$checks checks passed. Draft demo restored.\n";
