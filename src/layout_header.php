@@ -35,7 +35,14 @@ $user = current_user();
              — настоящая выпадающая группа, порядок пунктов внутри
              такой же, как в одноимённой группе плиток на панели. -->
         <a href="sms_campaign.php" class="<?= $activeNav === 'sms_campaign' ? 'active' : '' ?>">SMS-рассылки</a>
-        <a href="board_library.php" class="<?= $activeNav === 'board_library' ? 'active' : '' ?>">Платы</a>
+        <?php $toolsActive = in_array($activeNav, ['board_library', 'blog'], true); ?>
+        <div class="pay-dropdown">
+          <button type="button" class="nav-dropdown-btn <?= $toolsActive ? 'active' : '' ?>" onclick="toggleDropdownMenu(event, 'navToolsMenu')">Инструменты ▾</button>
+          <div class="pay-dropdown-menu" id="navToolsMenu">
+            <a href="board_library.php" class="pay-dropdown-item">Библиотека плат</a>
+            <?php if (is_file(__DIR__.'/../config/blog.php')): ?><a href="blog.php" class="pay-dropdown-item">Блог Avior</a><?php endif; ?>
+          </div>
+        </div>
         <?php $managementActive = in_array($activeNav, ['analytics', 'employees', 'finance', 'warehouse', 'b2b_partners', 'kudir'], true); ?>
         <div class="pay-dropdown">
           <button type="button" class="nav-dropdown-btn <?= $managementActive ? 'active' : '' ?>" onclick="toggleDropdownMenu(event, 'navManagementMenu')">Управление ▾</button>

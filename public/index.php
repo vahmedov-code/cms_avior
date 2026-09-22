@@ -127,6 +127,14 @@ require __DIR__ . '/../src/layout_header.php';
     <div class="module-arrow"><span class="group-toggle-label">Развернуть</span> <span class="group-toggle-arrow">▾</span></div>
   </div>
   <div class="module-children" id="group-tools">
+    <?php if (is_admin() && is_file(__DIR__.'/../config/blog.php')): ?>
+    <a class="module-card active" href="blog.php">
+      <div class="module-icon">📝</div>
+      <div class="module-title">Блог Avior</div>
+      <div class="module-desc">Добавление и редактирование статей, черновики, публикации и изображения для сайта.</div>
+      <div class="module-arrow">Управлять статьями →</div>
+    </a>
+    <?php endif; ?>
     <a class="module-card active" href="board_library.php">
       <div class="module-icon">🔧</div>
       <div class="module-title">Библиотека плат</div>
