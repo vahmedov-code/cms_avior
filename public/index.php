@@ -133,6 +133,12 @@ require __DIR__ . '/../src/layout_header.php';
       <div class="module-desc">Фото плат с метками номиналов — сопротивления дросселей и других компонентов по моделям.</div>
       <div class="module-arrow">Открыть →</div>
     </a>
+    <a class="module-card active" href="door_sign.php">
+      <div class="module-icon">🪧</div>
+      <div class="module-title">Вывеска на двери</div>
+      <div class="module-desc">Статус «Открыто/Закрыто/Скоро буду», картинки, расписание, QR-код и заряд электронной вывески.</div>
+      <div class="module-arrow">Открыть →</div>
+    </a>
   </div>
 
   <!-- ===== Группа «Управление» — только admin/owner (все пункты внутри и так ограничены) ===== -->
