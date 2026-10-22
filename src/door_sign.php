@@ -142,6 +142,12 @@ function door_sign_commands(array $sign): array
     if ((int) $sign['schedule_seq'] > 0) {
         $out['schedule'] = ['seq' => (int) $sign['schedule_seq'], 'value' => json_decode((string) $sign['schedule_json'], true)];
     }
+    if ((int) $sign['power_seq'] > 0) {
+        $out['power'] = ['seq' => (int) $sign['power_seq'], 'enabled' => (bool) $sign['power_save']];
+    }
+    if ((int) $sign['wake_seq'] > 0) {
+        $out['wake'] = ['seq' => (int) $sign['wake_seq']];
+    }
     if ((int) $sign['qr_seq'] > 0) {
         $out['qr'] = ['seq' => (int) $sign['qr_seq'], 'enabled' => (bool) $sign['qr_enabled'], 'url' => $sign['qr_url']];
     }
@@ -166,8 +172,14 @@ function door_sign_seconds_since_seen(array $sign): ?int
     return empty($sign['last_seen_at']) ? null : max(0, time() - (int) strtotime((string) $sign['last_seen_at']));
 }
 
+/**
+ * «На связи»: обычная вывеска опрашивает CRM раз в ~10 с, в режиме экономии —
+ * раз в wakeMinutes (15) минут, поэтому для неё и порог другой.
+ */
 function door_sign_is_online(array $sign): bool
 {
     $ago = door_sign_seconds_since_seen($sign);
-    return $ago !== null && $ago <= DOOR_SIGN_ONLINE_SECONDS;
+    $reported = door_sign_reported($sign);
+    $limit = !empty($reported['powerSave']) ? (int) ($reported['wakeMinutes'] ?? 15) * 60 + 120 : DOOR_SIGN_ONLINE_SECONDS;
+    return $ago !== null && $ago <= $limit;
 }

@@ -117,6 +117,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $finish($schedule['enabled'] ? 'Расписание сохранено и включено.' : 'Расписание сохранено и выключено.');
     }
 
+    if ($action === 'set_power') {
+        $enabled = post('power_save') === '1';
+        $seq = door_sign_next_seq($signId);
+        db()->prepare('UPDATE door_signs SET power_save = ?, power_seq = ? WHERE id = ?')->execute([$enabled ? 1 : 0, $seq, $signId]);
+        door_sign_log($signId, $userId, 'power', $enabled ? 'Режим экономии включён' : 'Режим экономии выключен');
+        $finish($enabled ? 'Режим экономии включится при следующей связи вывески.' : 'Режим экономии выключится при следующей связи вывески (до 15 минут).');
+    }
+
+    if ($action === 'wake') {
+        $seq = door_sign_next_seq($signId);
+        db()->prepare('UPDATE door_signs SET wake_seq = ? WHERE id = ?')->execute([$seq, $signId]);
+        door_sign_log($signId, $userId, 'wake', 'Запрос «Разбудить на 10 минут»');
+        $finish('Вывеска проснётся при следующей проверке (не позже чем через 15 минут) и 10 минут будет на связи.');
+    }
+
     if ($action === 'save_qr') {
         $url = trim(post('qr_url'));
         $enabled = post('qr_enabled') === '1';
@@ -267,10 +282,23 @@ require __DIR__ . '/../src/layout_header.php';
         <?php endforeach; ?>
       </div>
       <p class="ds-muted" style="margin-top:10px;">Выбор статуса вручную выключает расписание на вывеске — как и в её локальной панели.</p>
+      <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px;">
+        <form method="post" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input type="hidden" name="action" value="set_power"><input type="hidden" name="power_save" value="<?= $sign['power_save'] ? '0' : '1' ?>">
+          <span style="font-size:14px;flex:1;min-width:200px;">Экономия заряда: <b><?= $sign['power_save'] ? 'включена' : 'выключена' ?></b>
+            <span class="ds-muted"><br>Для работы от аккумулятора: вывеска спит и выходит на связь раз в 15 минут.</span></span>
+          <button class="btn btn-sm"><?= $sign['power_save'] ? 'Выключить' : 'Включить' ?></button>
+        </form>
+        <form method="post" id="dsWake" style="margin-top:10px;" <?= empty($reported['powerSave']) ? 'hidden' : '' ?>>
+          <input type="hidden" name="action" value="wake">
+          <button class="btn btn-sm btn-primary">Разбудить на 10 минут</button>
+          <span class="ds-muted">Сработает при следующей проверке — до 15 минут. Мгновенно будит кнопка на самой вывеске.</span>
+        </form>
+      </div>
     </div>
 
     <div class="ds-box">
-      <h3>QR-код на стандартных картинках</h3>
+      <h3>QR-код на вывеске</h3>
       <form method="post">
         <input type="hidden" name="action" value="save_qr">
         <label style="display:flex;gap:8px;align-items:center;font-size:14px;margin-bottom:10px;">
@@ -279,7 +307,7 @@ require __DIR__ . '/../src/layout_header.php';
         <label class="field">Ссылка<input type="url" name="qr_url" maxlength="160" value="<?= e($sign['qr_url']) ?>" required></label>
         <button class="btn btn-primary">Сохранить QR-код</button>
       </form>
-      <p class="ds-muted" style="margin-top:10px;">На своих картинках QR-кода нет — добавьте его в саму картинку, если нужно.</p>
+      <p class="ds-muted" style="margin-top:10px;">QR-код ставится справа на всех картинках, на своих — на белой подложке. Оставляйте эту часть картинки свободной.</p>
     </div>
   </div>
 
@@ -388,14 +416,21 @@ require __DIR__ . '/../src/layout_header.php';
     }
     ctx.putImageData(img, 0, 0);
   }
+  var qrOn = <?= $sign['qr_enabled'] ? 'true' : 'false' ?>;
+  // Место QR-кода, как его рисует вывеска: справа, на белой подложке поверх своих картинок.
+  function qrBox(ctx, plate) {
+    if (!qrOn) { return; }
+    if (plate) { ctx.fillStyle = '#fff'; ctx.fillRect(543, 116, 231, 273); }
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeRect(557, 130, 203, 203);
+    ctx.fillStyle = '#000'; ctx.font = '600 22px system-ui'; ctx.textAlign = 'center'; ctx.fillText('QR', 658, 240); ctx.textAlign = 'left';
+  }
   function standard(ctx, slot) {
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 800, 480);
     if (slot === 'image') { ctx.fillStyle = '#000'; ctx.textAlign = 'center'; ctx.font = '600 34px system-ui'; ctx.fillText('Картинка не загружена', 400, 250); ctx.textAlign = 'left'; return; }
     ctx.fillStyle = slot === 'closed' ? '#c41e23' : slot === 'soon' ? '#ffd500' : '#000'; ctx.fillRect(40, 40, 720, 8);
     ctx.fillStyle = '#000'; ctx.font = '700 40px monospace'; ctx.fillText('AVIOR', 44, 125);
-    ctx.font = '600 64px system-ui'; ctx.fillText(labels[slot], 44, 264, 470);
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeRect(557, 130, 203, 203);
-    ctx.font = '600 22px system-ui'; ctx.textAlign = 'center'; ctx.fillText('QR', 658, 240); ctx.textAlign = 'left';
+    ctx.font = '600 64px system-ui'; ctx.fillText(labels[slot], 44, 264, qrOn ? 470 : 712);
+    qrBox(ctx, false);
   }
 
   document.querySelectorAll('.ds-tile').forEach(function (tile) {
@@ -403,7 +438,7 @@ require __DIR__ . '/../src/layout_header.php';
     standard(ctx, slot);
     if (tile.dataset.saved === '1') {
       fetch('door_sign.php?frame=' + slot, {cache: 'no-store'}).then(function (r) { return r.ok ? r.arrayBuffer() : null; })
-        .then(function (b) { if (b && b.byteLength === 96000) { unpack(ctx, new Uint8Array(b)); } });
+        .then(function (b) { if (b && b.byteLength === 96000) { unpack(ctx, new Uint8Array(b)); qrBox(ctx, true); } });
     }
     tile.querySelector('input[type=file]').addEventListener('change', function (ev) {
       var file = ev.target.files[0]; ev.target.value = '';
@@ -413,7 +448,7 @@ require __DIR__ . '/../src/layout_header.php';
         ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 800, 480);
         var s = Math.min(800 / img.width, 480 / img.height), w = img.width * s, h = img.height * s;
         ctx.drawImage(img, (800 - w) / 2, (480 - h) / 2, w, h); img.close();
-        var bytes = pack(ctx); unpack(ctx, bytes);
+        var bytes = pack(ctx); unpack(ctx, bytes); qrBox(ctx, true);
         if (!confirm('Сохранить эту картинку для «' + labels[slot] + '»? Так она будет выглядеть на двери.')) { location.reload(); return; }
         var form = new FormData();
         form.append('csrf_token', csrf); form.append('action', 'upload_asset'); form.append('slot', slot); form.append('ajax', '1');
@@ -466,7 +501,11 @@ require __DIR__ . '/../src/layout_header.php';
   }
   function show(d) {
     var box = document.getElementById('dsState'), r = d.reported || {};
-    box.replaceChildren(d.online ? pill('На связи · ' + ago(d.secondsAgo), 'ok') : pill('Нет связи · ' + ago(d.secondsAgo), 'bad'));
+    var sleeping = r.powerSave && !(r.awakeSeconds > 0);
+    box.replaceChildren(!d.online ? pill('Нет связи · ' + ago(d.secondsAgo), 'bad')
+      : sleeping ? pill('Спит · связь раз в ' + (r.wakeMinutes || 15) + ' мин, последняя ' + ago(d.secondsAgo), 'ok')
+      : pill('На связи · ' + ago(d.secondsAgo), 'ok'));
+    document.getElementById('dsWake').hidden = !r.powerSave;
     if (r.displayed) { box.append(pill('На экране: ' + (labels[r.displayed] || 'неизвестно'))); }
     if (r.busy) { box.append(pill('Экран обновляется')); }
     if (r.displayError) { box.append(pill(r.displayError, 'bad')); }

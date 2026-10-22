@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS door_signs (
     qr_enabled     TINYINT(1) NOT NULL DEFAULT 1,
     qr_url         VARCHAR(160) NOT NULL DEFAULT 'https://avior.moscow/na-svyazi/',
     qr_seq         INT UNSIGNED NOT NULL DEFAULT 0,
+    power_save     TINYINT(1) NOT NULL DEFAULT 0,     -- режим экономии (работа от аккумулятора)
+    power_seq      INT UNSIGNED NOT NULL DEFAULT 0,
+    wake_seq       INT UNSIGNED NOT NULL DEFAULT 0,   -- «Разбудить»: вывеска 10 минут не спит
     reported_json  TEXT NULL,                         -- последнее состояние, присланное вывеской
     last_seen_at   DATETIME NULL,
     last_ip        VARCHAR(45) NULL,
