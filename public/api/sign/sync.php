@@ -8,7 +8,9 @@
  * POST /api/sign/sync.php
  * Заголовок: Authorization: Bearer <токен> (или X-Sign-Token: <токен>)
  * Тело (JSON): состояние вывески — version, desired, displayed, busy,
- *   displayError, battery, uptimeSeconds, applied{...} и т.д.
+ *   displayError, battery, uptimeSeconds, applied{...} и т.д., с 0.4.0 ещё
+ *   log{next, events[]} — свежие события из журнала вывески.
+ * Ответ: door_sign_commands() и eventsAck — номер последнего сохранённого события.
  *
  * Сессия здесь не нужна, поэтому bootstrap.php не подключается: опрос
  * каждые 10 секунд не должен плодить файлы сессий на сервере.
@@ -27,9 +29,15 @@ if (!is_array($report)) {
     door_sign_api_fail(400, 'Ожидается JSON с состоянием вывески.');
 }
 
-// В журнал — только переходы, чтобы он оставался коротким.
+// Журнал самой вывески (прошивка 0.4.0+) — в door_sign_log; в reported_json его не храним.
+$deviceLog = $report['log'] ?? null;
+unset($report['log']);
+$eventsAck = door_sign_store_events($sign, $deviceLog);
+
+// В журнал — только переходы, чтобы он оставался коротким. Вывеска со своим журналом
+// сама пишет перезапуски с причиной и обновления экрана, тогда здесь их не дублируем.
 $previous = door_sign_reported($sign);
-if ($previous !== null) {
+if ($previous !== null && $eventsAck === null) {
     $shown = $report['displayed'] ?? null;
     if ($shown !== ($previous['displayed'] ?? null) && in_array($shown, DOOR_SIGN_SLOTS, true)) {
         door_sign_log((int) $sign['id'], null, 'shown', 'На экране: ' . door_sign_label($shown));
@@ -49,4 +57,8 @@ if ($previous !== null) {
 db()->prepare('UPDATE door_signs SET reported_json = ?, last_seen_at = ?, last_ip = ? WHERE id = ?')
     ->execute([json_encode($report, JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'] ?? null, $sign['id']]);
 
-echo json_encode(door_sign_commands($sign), JSON_UNESCAPED_UNICODE);
+$out = door_sign_commands($sign);
+if ($eventsAck !== null) {
+    $out['eventsAck'] = $eventsAck;
+}
+echo json_encode($out, JSON_UNESCAPED_UNICODE);

@@ -289,6 +289,7 @@ CREATE TABLE IF NOT EXISTS door_signs (
     power_save     TINYINT(1) NOT NULL DEFAULT 0,     -- режим экономии (работа от аккумулятора)
     power_seq      INT UNSIGNED NOT NULL DEFAULT 0,
     wake_seq       INT UNSIGNED NOT NULL DEFAULT 0,   -- «Разбудить»: вывеска 10 минут не спит
+    events_seq     INT UNSIGNED NOT NULL DEFAULT 0,   -- последнее событие из журнала вывески, сохранённое в door_sign_log
     reported_json  TEXT NULL,                         -- последнее состояние, присланное вывеской
     last_seen_at   DATETIME NULL,
     last_ip        VARCHAR(45) NULL,

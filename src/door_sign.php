@@ -176,6 +176,60 @@ function door_sign_seconds_since_seen(array $sign): ?int
  * «На связи»: обычная вывеска опрашивает CRM раз в ~10 с, в режиме экономии —
  * раз в wakeMinutes (15) минут, поэтому для неё и порог другой.
  */
+/**
+ * Журнал самой вывески (прошивка 0.4.0+): в каждом обмене она присылает до 8 своих событий,
+ * ещё не подтверждённых CRM, — перезапуски и их причины, пропадания Wi-Fi, ошибки связи,
+ * обновления экрана. Сохраняем их в door_sign_log (action «device:…», без пользователя) и
+ * возвращаем номер последнего сохранённого: вывеска больше их не присылает. Без миграции
+ * 2026_10_23_door_sign_events.sql (нет столбца events_seq) возвращает null и ничего не пишет.
+ */
+function door_sign_store_events(array $sign, $log): ?int
+{
+    if (!array_key_exists('events_seq', $sign) || !is_array($log)) {
+        return null;
+    }
+    $stored = (int) $sign['events_seq'];
+    // Счётчик на вывеске пошёл заново (стёрта её память) — принимаем события с начала.
+    $next = (int) ($log['next'] ?? 0);
+    if ($next > 0 && $next <= $stored) {
+        $stored = 0;
+    }
+    $last = $stored;
+    $insert = db()->prepare('INSERT INTO door_sign_log (sign_id, user_id, action, detail, created_at)
+        VALUES (?, NULL, ?, ?, COALESCE(FROM_UNIXTIME(?), CURRENT_TIMESTAMP))');
+    foreach (is_array($log['events'] ?? null) ? $log['events'] : [] as $e) {
+        $seq = is_array($e) ? (int) ($e['seq'] ?? 0) : 0;
+        if ($seq <= $last) {
+            continue;
+        }
+        $kind = preg_replace('/[^a-z_]/', '', (string) ($e['kind'] ?? '')) ?: 'event';
+        $code = (int) ($e['code'] ?? 0);
+        // Сбойные перезапуски и низкий заряд отмечаем отдельно, чтобы выделить их в журнале.
+        if ($kind === 'boot' && in_array($code, [4, 5, 6, 7, 9], true)) {
+            $kind = 'boot_fault';
+        } elseif ($kind === 'battery' && $code <= 15) {
+            $kind = 'battery_low';
+        }
+        $time = (int) ($e['time'] ?? 0);
+        // Время с вывески — если её часы были установлены; иначе момент получения.
+        $at = !empty($e['timeValid']) && $time > 1700000000 && $time < time() + 3600 ? $time : null;
+        $text = trim((string) ($e['text'] ?? ''));
+        $insert->execute([$sign['id'], 'device:' . substr($kind, 0, 30), mb_substr($text !== '' ? $text : $kind, 0, 255), $at]);
+        $last = $seq;
+    }
+    if ($last !== (int) $sign['events_seq']) {
+        db()->prepare('UPDATE door_signs SET events_seq = ? WHERE id = ?')->execute([$last, $sign['id']]);
+    }
+    return $last;
+}
+
+/** События вывески, которые стоит выделить в журнале. */
+function door_sign_event_is_fault(string $action): bool
+{
+    return in_array($action, ['device:boot_fault', 'device:before_reset', 'device:render_abort', 'device:wifi_down',
+        'device:crm_error', 'device:refresh_fail', 'device:battery_low', 'device:dropped'], true);
+}
+
 function door_sign_is_online(array $sign): bool
 {
     $ago = door_sign_seconds_since_seen($sign);

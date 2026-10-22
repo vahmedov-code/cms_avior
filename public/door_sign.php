@@ -195,7 +195,7 @@ if ($sign) {
     }
     $stmt = db()->prepare(
         'SELECT l.created_at, l.action, l.detail, u.full_name FROM door_sign_log l
-         LEFT JOIN users u ON u.id = l.user_id WHERE l.sign_id = ? ORDER BY l.id DESC LIMIT 25'
+         LEFT JOIN users u ON u.id = l.user_id WHERE l.sign_id = ? ORDER BY l.created_at DESC, l.id DESC LIMIT 60'
     );
     $stmt->execute([$sign['id']]);
     $log = $stmt->fetchAll();
@@ -214,6 +214,7 @@ require __DIR__ . '/../src/layout_header.php';
 .ds-box .table-card{overflow-x:auto;}
 .ds-box h3{margin:0 0 12px;color:var(--navy);font-size:16px;}
 .ds-muted{color:var(--muted);font-size:12px;}
+.ds-fault td{color:var(--danger);background:#fdf3f1;}
 .ds-state{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
 .ds-pill{font-size:13px;border:1px solid var(--border);border-radius:30px;padding:5px 12px;background:#f7f9fc;}
 .ds-pill.ok{background:#e6f4ea;color:var(--good);border-color:#c6e5cf;}
@@ -307,7 +308,7 @@ require __DIR__ . '/../src/layout_header.php';
         <label class="field">Ссылка<input type="url" name="qr_url" maxlength="160" value="<?= e($sign['qr_url']) ?>" required></label>
         <button class="btn btn-primary">Сохранить QR-код</button>
       </form>
-      <p class="ds-muted" style="margin-top:10px;">QR-код ставится справа на всех картинках, на своих — на белой подложке. Оставляйте эту часть картинки свободной.</p>
+      <p class="ds-muted" style="margin-top:10px;">QR-код ставится справа внизу на всех картинках (квадрат около 100 px над нижней строкой), на своих — на белой подложке с подписью «Связаться». Оставляйте это место свободным.</p>
     </div>
   </div>
 
@@ -356,12 +357,14 @@ require __DIR__ . '/../src/layout_header.php';
   <div class="ds-grid">
     <div class="ds-box">
       <h3>Журнал</h3>
+      <p class="ds-muted" style="margin:-6px 0 10px;">Действия в CRM и события самой вывески (прошивка 0.4.0+): перезапуски и их причины,
+        пропадания Wi-Fi, ошибки связи, обновления экрана. Сбои выделены красным.</p>
       <?php if (!$log): ?><p class="ds-muted">Пока пусто.</p><?php else: ?>
-        <div class="table-card"><table>
+        <div class="table-card" style="max-height:560px;overflow-y:auto;"><table>
           <thead><tr><th>Когда</th><th>Что</th><th>Кто</th></tr></thead>
           <tbody>
-          <?php foreach ($log as $row): ?>
-            <tr><td><?= e(date('d.m H:i', strtotime((string) $row['created_at']))) ?></td><td><?= e($row['detail'] ?? $row['action']) ?></td><td><?= e($row['full_name'] ?? 'вывеска') ?></td></tr>
+          <?php foreach ($log as $row): $fault = door_sign_event_is_fault((string) $row['action']); ?>
+            <tr<?= $fault ? ' class="ds-fault"' : '' ?>><td style="white-space:nowrap;"><?= e(date('d.m H:i:s', strtotime((string) $row['created_at']))) ?></td><td><?= e($row['detail'] ?? $row['action']) ?></td><td><?= e($row['full_name'] ?? 'вывеска') ?></td></tr>
           <?php endforeach; ?>
           </tbody>
         </table></div>
@@ -417,25 +420,36 @@ require __DIR__ . '/../src/layout_header.php';
     ctx.putImageData(img, 0, 0);
   }
   var qrOn = <?= $sign['qr_enabled'] ? 'true' : 'false' ?>;
-  // Место QR-кода, как его рисует вывеска: справа, на белой подложке поверх своих картинок.
+  // Место QR-кода, как его рисует вывеска (прошивка 0.4.0+): квадрат 99 px справа внизу.
+  // Стандартные картинки несут подпись сами, поверх своих вывеска кладёт подложку с подписью.
+  var QR = {x: 681, y: 290, size: 99};
   function qrBox(ctx, plate) {
     if (!qrOn) { return; }
-    if (plate) { ctx.fillStyle = '#fff'; ctx.fillRect(543, 116, 231, 273); }
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeRect(557, 130, 203, 203);
-    ctx.fillStyle = '#000'; ctx.font = '600 22px system-ui'; ctx.textAlign = 'center'; ctx.fillText('QR', 658, 240); ctx.textAlign = 'left';
+    if (plate) {
+      ctx.fillStyle = '#fff'; ctx.fillRect(QR.x - 4, QR.y - 4, QR.size + 8, QR.size + 30);
+      ctx.fillStyle = '#000'; ctx.font = '15px monospace'; ctx.textAlign = 'center'; ctx.fillText('Связаться', QR.x + QR.size / 2, QR.y + QR.size + 16); ctx.textAlign = 'left';
+    }
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeRect(QR.x + 2, QR.y + 2, QR.size - 4, QR.size - 4);
+    ctx.fillStyle = '#000'; ctx.font = '600 20px system-ui'; ctx.textAlign = 'center'; ctx.fillText('QR', QR.x + QR.size / 2, QR.y + QR.size / 2 + 7); ctx.textAlign = 'left';
   }
+  // Стандартные картинки — те же, что зашиты в прошивку (assets/templates в репозитории прошивки).
+  var templates = {};
   function standard(ctx, slot) {
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 800, 480);
     if (slot === 'image') { ctx.fillStyle = '#000'; ctx.textAlign = 'center'; ctx.font = '600 34px system-ui'; ctx.fillText('Картинка не загружена', 400, 250); ctx.textAlign = 'left'; return; }
-    ctx.fillStyle = slot === 'closed' ? '#c41e23' : slot === 'soon' ? '#ffd500' : '#000'; ctx.fillRect(40, 40, 720, 8);
-    ctx.fillStyle = '#000'; ctx.font = '700 40px monospace'; ctx.fillText('AVIOR', 44, 125);
-    ctx.font = '600 64px system-ui'; ctx.fillText(labels[slot], 44, 264, qrOn ? 470 : 712);
+    if (templates[slot]) { ctx.drawImage(templates[slot], 0, 0, 800, 480); }
+    else { ctx.fillStyle = '#000'; ctx.font = '600 64px system-ui'; ctx.fillText(labels[slot], 44, 264, 600); }
     qrBox(ctx, false);
   }
 
   document.querySelectorAll('.ds-tile').forEach(function (tile) {
     var slot = tile.dataset.slot, canvas = tile.querySelector('canvas'), ctx = canvas.getContext('2d', {willReadFrequently: true});
     standard(ctx, slot);
+    if (slot !== 'image' && tile.dataset.saved !== '1') {
+      var img = new Image();
+      img.onload = function () { templates[slot] = img; standard(ctx, slot); };
+      img.src = 'assets/img/door-sign/' + slot + '.png?v=040';
+    }
     if (tile.dataset.saved === '1') {
       fetch('door_sign.php?frame=' + slot, {cache: 'no-store'}).then(function (r) { return r.ok ? r.arrayBuffer() : null; })
         .then(function (b) { if (b && b.byteLength === 96000) { unpack(ctx, new Uint8Array(b)); qrBox(ctx, true); } });
