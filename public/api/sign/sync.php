@@ -34,7 +34,11 @@ $deviceLog = $report['log'] ?? null;
 unset($report['log']);
 // Ключ локальной панели (прошивка 0.4.3+) — отдельно, не в reported_json: его видят только владелец и администраторы.
 $localKey = $report['localKey'] ?? null;
-unset($report['localKey']);
+$apKey = $report['apKey'] ?? null;
+unset($report['localKey'], $report['apKey']);
+if (is_string($apKey) && preg_match('/^[0-9a-f]{8,32}$/', $apKey) && array_key_exists('ap_key', $sign) && $apKey !== $sign['ap_key']) {
+    db()->prepare('UPDATE door_signs SET ap_key = ? WHERE id = ?')->execute([$apKey, $sign['id']]);
+}
 if (is_string($localKey) && preg_match('/^[0-9a-f]{16,64}$/', $localKey) && array_key_exists('local_key', $sign) && $localKey !== $sign['local_key']) {
     db()->prepare('UPDATE door_signs SET local_key = ? WHERE id = ?')->execute([$localKey, $sign['id']]);
 }

@@ -307,6 +307,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $finish('Прошивка ' . $check['version'] . ' загружена. Вывеска скачает её при следующей связи (во сне — до 15 минут) и перезапустится.');
     }
 
+    if ($action === 'set_panel_login') {
+        if (!is_admin()) {
+            $finish('Задавать пароль панели может владелец или администратор.', false);
+        }
+        if (!array_key_exists('panel_seq', $sign)) {
+            $finish('Сначала примените миграцию 2026_10_27_door_sign_panel.sql.', false);
+        }
+        $user = trim(post('panel_user'));
+        $password = (string) ($_POST['panel_password'] ?? '');
+        if ($user === '' || mb_strlen($user) > 32 || strlen($password) < 8 || strlen($password) > 64) {
+            $finish('Логин — до 32 символов, пароль — от 8 до 64.', false);
+        }
+        if ($password !== (string) ($_POST['panel_password2'] ?? '')) {
+            $finish('Пароли не совпадают.', false);
+        }
+        $salt = bin2hex(random_bytes(16));
+        $seq = door_sign_next_seq($signId);
+        db()->prepare('UPDATE door_signs SET panel_user = ?, panel_salt = ?, panel_hash = ?, panel_seq = ? WHERE id = ?')
+            ->execute([$user, $salt, door_sign_panel_hash($password, $salt), $seq, $signId]);
+        door_sign_log($signId, $userId, 'panel_login', 'Задан логин панели вывески: ' . $user);
+        $finish('Логин и пароль уйдут на вывеску при следующей связи (нужна прошивка 0.4.4). Входите в её панель по ним.');
+    }
+
     if ($action === 'rename') {
         $name = trim(post('name'));
         if ($name === '' || mb_strlen($name) > 100) {
@@ -604,10 +627,25 @@ require __DIR__ . '/../src/layout_header.php';
         <button class="btn">Сохранить</button>
       </form>
       <p class="ds-muted" id="dsLocal">Wi-Fi — в локальной панели вывески, она открывается только из офисной сети.</p>
-      <?php if (is_admin() && !empty($sign['local_key'])): ?>
-        <p style="font-size:14px;">Ключ локальной панели:
-          <button type="button" class="btn btn-sm" onclick="this.hidden=true;this.nextElementSibling.hidden=false;">Показать</button>
-          <span class="ds-token" hidden><?= e($sign['local_key']) ?></span></p>
+      <?php if (is_admin()): ?>
+        <?php if (array_key_exists('panel_seq', $sign)): ?>
+          <form method="post" style="border-top:1px solid var(--border);padding-top:10px;margin-bottom:10px;" autocomplete="off">
+            <input type="hidden" name="action" value="set_panel_login">
+            <p style="font-size:14px;margin:0 0 6px;">Вход в локальную панель: <b><?= !empty($reported['panelUser']) ? 'логин «' . e($reported['panelUser']) . '»' : 'пароль не задан' ?></b></p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
+              <label class="field" style="margin:0;flex:1;min-width:120px;">Логин<input name="panel_user" maxlength="32" value="<?= e($reported['panelUser'] ?? ($sign['panel_user'] ?? '')) ?>" required></label>
+              <label class="field" style="margin:0;flex:1;min-width:120px;">Пароль<input type="password" name="panel_password" minlength="8" maxlength="64" autocomplete="new-password" required></label>
+              <label class="field" style="margin:0;flex:1;min-width:120px;">Ещё раз<input type="password" name="panel_password2" minlength="8" maxlength="64" autocomplete="new-password" required></label>
+              <button class="btn btn-sm btn-primary">Задать</button>
+            </div>
+            <p class="ds-muted" style="margin:6px 0 0;">Прошивка 0.4.4+. В CRM и на вывеске хранится только хеш пароля.</p>
+          </form>
+        <?php endif; ?>
+        <?php foreach (['local_key' => 'Ключ API', 'ap_key' => 'Пароль точки доступа'] as $col => $label): if (!empty($sign[$col])): ?>
+          <p style="font-size:14px;"><?= $label ?>:
+            <button type="button" class="btn btn-sm" onclick="this.hidden=true;this.nextElementSibling.hidden=false;">Показать</button>
+            <span class="ds-token" hidden><?= e($sign[$col]) ?></span></p>
+        <?php endif; endforeach; ?>
       <?php endif; ?>
       <?php if (is_admin()): ?>
         <form method="post" onsubmit="return confirm('Старый токен перестанет работать. Новый нужно будет ввести в панели вывески. Продолжить?');">

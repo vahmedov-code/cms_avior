@@ -158,6 +158,9 @@ function door_sign_commands(array $sign): array
     if ((int) $sign['qr_seq'] > 0) {
         $out['qr'] = ['seq' => (int) $sign['qr_seq'], 'enabled' => (bool) $sign['qr_enabled'], 'url' => $sign['qr_url']];
     }
+    if ((int) ($sign['panel_seq'] ?? 0) > 0) {
+        $out['panel'] = ['seq' => (int) $sign['panel_seq'], 'user' => $sign['panel_user'], 'salt' => $sign['panel_salt'], 'hash' => $sign['panel_hash']];
+    }
     if ((int) ($sign['firmware_seq'] ?? 0) > 0 && ($fw = door_sign_firmware_info((int) $sign['id']))) {
         $out['firmware'] = ['seq' => (int) $sign['firmware_seq'], 'version' => $fw['version'], 'size' => (int) $fw['size'], 'sha256' => $fw['sha256']];
     }
@@ -167,6 +170,12 @@ function door_sign_commands(array $sign): array
         $out['assets'][$a['slot']] = ['seq' => (int) $a['seq'], 'present' => (bool) $a['present'], 'sha256' => $a['sha256']];
     }
     return $out;
+}
+
+/** Соль и хеш пароля панели так же, как их проверяет прошивка: PBKDF2-SHA256, 2000 раундов, 32 байта. */
+function door_sign_panel_hash(string $password, string $saltHex): string
+{
+    return bin2hex(hash_pbkdf2('sha256', $password, (string) hex2bin($saltHex), 2000, 32, true));
 }
 
 /** Загруженная в CRM прошивка без самого файла (или null; null и без миграции). */
