@@ -32,6 +32,12 @@ if (!is_array($report)) {
 // Журнал самой вывески (прошивка 0.4.0+) — в door_sign_log; в reported_json его не храним.
 $deviceLog = $report['log'] ?? null;
 unset($report['log']);
+// Ключ локальной панели (прошивка 0.4.3+) — отдельно, не в reported_json: его видят только владелец и администраторы.
+$localKey = $report['localKey'] ?? null;
+unset($report['localKey']);
+if (is_string($localKey) && preg_match('/^[0-9a-f]{16,64}$/', $localKey) && array_key_exists('local_key', $sign) && $localKey !== $sign['local_key']) {
+    db()->prepare('UPDATE door_signs SET local_key = ? WHERE id = ?')->execute([$localKey, $sign['id']]);
+}
 $eventsAck = door_sign_store_events($sign, $deviceLog);
 
 // В журнал — только переходы, чтобы он оставался коротким. Вывеска со своим журналом

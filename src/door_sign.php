@@ -158,12 +158,46 @@ function door_sign_commands(array $sign): array
     if ((int) $sign['qr_seq'] > 0) {
         $out['qr'] = ['seq' => (int) $sign['qr_seq'], 'enabled' => (bool) $sign['qr_enabled'], 'url' => $sign['qr_url']];
     }
+    if ((int) ($sign['firmware_seq'] ?? 0) > 0 && ($fw = door_sign_firmware_info((int) $sign['id']))) {
+        $out['firmware'] = ['seq' => (int) $sign['firmware_seq'], 'version' => $fw['version'], 'size' => (int) $fw['size'], 'sha256' => $fw['sha256']];
+    }
     $stmt = db()->prepare('SELECT slot, sha256, seq, frame IS NOT NULL AS present FROM door_sign_assets WHERE sign_id = ?');
     $stmt->execute([$sign['id']]);
     foreach ($stmt->fetchAll() as $a) {
         $out['assets'][$a['slot']] = ['seq' => (int) $a['seq'], 'present' => (bool) $a['present'], 'sha256' => $a['sha256']];
     }
     return $out;
+}
+
+/** Загруженная в CRM прошивка без самого файла (или null; null и без миграции). */
+function door_sign_firmware_info(int $signId): ?array
+{
+    try {
+        $stmt = db()->prepare('SELECT version, size, sha256, uploaded_at FROM door_sign_firmware WHERE sign_id = ?');
+        $stmt->execute([$signId]);
+        return $stmt->fetch() ?: null;
+    } catch (PDOException $e) {
+        return null;
+    }
+}
+
+/**
+ * Проверка firmware.bin перед выдачей вывеске: образ ESP32 (первый байт 0xE9), влезает в
+ * раздел OTA 0x140000, несёт метку AVIORSIGN_VERSION=…; (прошивка 0.4.3+) и это не
+ * диагностическая сборка — та отключает связь с CRM. Возвращает версию или текст ошибки.
+ */
+function door_sign_check_firmware(string $data): array
+{
+    if (strlen($data) < 100000 || strlen($data) > 0x140000 || ord($data[0]) !== 0xE9) {
+        return ['error' => 'Это не firmware.bin для ESP32 или файл больше раздела прошивки (1,25 МБ).'];
+    }
+    if (!preg_match('/AVIORSIGN_VERSION=([0-9A-Za-z.\-]{1,40});/', $data, $m)) {
+        return ['error' => 'В файле нет метки версии AviorSign. Из CRM ставятся прошивки 0.4.3 и новее; более старые — через локальную панель.'];
+    }
+    if (strpos($m[1], 'recovery') !== false) {
+        return ['error' => 'Диагностическую (recovery) прошивку из CRM ставить нельзя: она отключает связь с CRM. Ставьте её через USB.'];
+    }
+    return ['version' => $m[1]];
 }
 
 /** Состояние, которое вывеска прислала последним (или null). */

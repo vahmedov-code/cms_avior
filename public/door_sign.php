@@ -251,6 +251,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             : 'Для «' . door_sign_label($slot) . '» снова стандартная картинка.');
     }
 
+    // Прошивка: файл приходит частями по 512 КБ (лимит тела запроса nginx по умолчанию — 1 МБ),
+    // собирается во временном файле и после проверки ложится в door_sign_firmware.
+    if (in_array($action, ['firmware_chunk', 'firmware_retry', 'firmware_delete'], true)) {
+        if (!is_admin()) {
+            $finish('Обновлять прошивку может владелец или администратор.', false);
+        }
+        if (!array_key_exists('firmware_seq', $sign)) {
+            $finish('Сначала примените миграцию 2026_10_26_door_sign_firmware.sql.', false);
+        }
+        if ($action === 'firmware_delete') {
+            db()->prepare('DELETE FROM door_sign_firmware WHERE sign_id = ?')->execute([$signId]);
+            door_sign_log($signId, $userId, 'firmware', 'Прошивка удалена из CRM');
+            $finish('Прошивка удалена из CRM, вывеска её не получит.');
+        }
+        if ($action === 'firmware_retry') {
+            $fw = door_sign_firmware_info($signId);
+            if (!$fw) {
+                $finish('В CRM нет загруженной прошивки.', false);
+            }
+            $seq = door_sign_next_seq($signId);
+            db()->prepare('UPDATE door_signs SET firmware_seq = ? WHERE id = ?')->execute([$seq, $signId]);
+            door_sign_log($signId, $userId, 'firmware', 'Повторная установка прошивки ' . $fw['version']);
+            $finish('Вывеска попробует установить ' . $fw['version'] . ' ещё раз при следующей связи.');
+        }
+        $upload = preg_replace('/[^0-9a-f]/', '', post('upload'));
+        $index = (int) post('index');
+        $total = (int) post('total');
+        $file = $_FILES['chunk'] ?? null;
+        if (strlen($upload) < 16 || $total < 1 || $total > 8 || $index < 0 || $index >= $total || !$file || ($file['error'] ?? 1) !== UPLOAD_ERR_OK) {
+            $finish('Часть файла не дошла. Попробуйте загрузить ещё раз.', false);
+        }
+        $path = sys_get_temp_dir() . '/avior-firmware-' . $upload . '.part';
+        $expected = $_SESSION['door_sign_fw'][$upload] ?? 0;
+        if ($index !== $expected) {
+            $finish('Части файла пришли не по порядку. Загрузите ещё раз.', false);
+        }
+        file_put_contents($path, (string) file_get_contents($file['tmp_name']), $index === 0 ? 0 : FILE_APPEND);
+        $_SESSION['door_sign_fw'] = [$upload => $index + 1];
+        if ($index + 1 < $total) {
+            $finish('Часть ' . ($index + 1) . ' из ' . $total . ' получена.');
+        }
+        $data = (string) file_get_contents($path);
+        @unlink($path);
+        unset($_SESSION['door_sign_fw']);
+        $check = door_sign_check_firmware($data);
+        if (isset($check['error'])) {
+            $finish($check['error'], false);
+        }
+        db()->prepare('REPLACE INTO door_sign_firmware (sign_id, version, size, sha256, data, user_id) VALUES (?, ?, ?, ?, ?, ?)')
+            ->execute([$signId, $check['version'], strlen($data), hash('sha256', $data), $data, $userId]);
+        $seq = door_sign_next_seq($signId);
+        db()->prepare('UPDATE door_signs SET firmware_seq = ? WHERE id = ?')->execute([$seq, $signId]);
+        door_sign_log($signId, $userId, 'firmware', 'Загружена прошивка ' . $check['version'] . ' (' . round(strlen($data) / 1024) . ' КБ)');
+        $finish('Прошивка ' . $check['version'] . ' загружена. Вывеска скачает её при следующей связи (во сне — до 15 минут) и перезапустится.');
+    }
+
     if ($action === 'rename') {
         $name = trim(post('name'));
         if ($name === '' || mb_strlen($name) > 100) {
@@ -282,6 +338,8 @@ if ($sign) {
     $batteryReady = array_key_exists('battery_seq', $sign);
     $cycle = $batteryReady ? door_sign_battery_cycle(door_sign_battery_points((int) $sign['id'], time() - 60 * 86400)) : null;
     $curveSaved = json_decode((string) ($sign['battery_curve'] ?? ''), true);
+    $firmwareReady = array_key_exists('firmware_seq', $sign);
+    $firmware = $firmwareReady ? door_sign_firmware_info((int) $sign['id']) : null;
 }
 // Расписание для редактора: заданное в CRM, иначе то, что сейчас на вывеске.
 $schedule = $sign && $sign['schedule_json'] ? json_decode($sign['schedule_json'], true)
@@ -457,6 +515,29 @@ require __DIR__ . '/../src/layout_header.php';
     <?php endif; ?>
   </div>
 
+  <div class="ds-box" style="margin-bottom:24px;" id="dsFirmware">
+    <h3>Прошивка</h3>
+    <?php if (!$firmwareReady): ?>
+      <p class="ds-muted">Обновление из CRM включится после миграции <code>sql/migrations/2026_10_26_door_sign_firmware.sql</code>.</p>
+    <?php else: ?>
+      <p style="font-size:14px;margin:0 0 6px;">На вывеске: <b><?= e($reported['version'] ?? '—') ?></b><?php if ($firmware): ?> · в CRM: <b><?= e($firmware['version']) ?></b>,
+        <?= round($firmware['size'] / 1024) ?> КБ, загружена <?= e(date('d.m H:i', strtotime((string) $firmware['uploaded_at']))) ?><?php endif; ?></p>
+      <p class="ds-muted" id="dsFwStatus" style="margin:0 0 10px;"></p>
+      <?php if (is_admin()): ?>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <label class="btn btn-sm btn-primary ds-file">Загрузить firmware.bin<input type="file" id="dsFwFile" accept=".bin,application/octet-stream"></label>
+          <?php if ($firmware): ?>
+            <form method="post"><input type="hidden" name="action" value="firmware_retry"><button class="btn btn-sm">Установить ещё раз</button></form>
+            <form method="post" onsubmit="return confirm('Удалить прошивку из CRM? Если вывеска её ещё не скачала, она её не получит.');"><input type="hidden" name="action" value="firmware_delete"><button class="btn btn-sm btn-warn">Удалить из CRM</button></form>
+          <?php endif; ?>
+        </div>
+        <progress id="dsFwProgress" max="1" value="0" hidden style="width:100%;margin-top:8px;"></progress>
+      <?php endif; ?>
+      <p class="ds-muted" style="margin:8px 0 0;">Файл — <code>firmware.bin</code> из сборки (из CRM ставятся версии 0.4.3 и новее, кроме диагностических). Вывеска скачивает его по HTTPS,
+        сверяет контрольную сумму и перезапускается; если новая версия за 10 минут не выйдет на связь с CRM или будет перезапускаться без остановки, вывеска сама вернётся к прежней.</p>
+    <?php endif; ?>
+  </div>
+
   <div class="ds-box" style="margin-bottom:24px;">
     <h3>Картинки статусов</h3>
     <div class="ds-tiles">
@@ -522,7 +603,12 @@ require __DIR__ . '/../src/layout_header.php';
         <label class="field" style="flex:1;min-width:160px;margin:0;">Название<input name="name" maxlength="100" value="<?= e($sign['name']) ?>"></label>
         <button class="btn">Сохранить</button>
       </form>
-      <p class="ds-muted" id="dsLocal">Wi-Fi и обновление прошивки — в локальной панели вывески, она открывается только из офисной сети.</p>
+      <p class="ds-muted" id="dsLocal">Wi-Fi — в локальной панели вывески, она открывается только из офисной сети.</p>
+      <?php if (is_admin() && !empty($sign['local_key'])): ?>
+        <p style="font-size:14px;">Ключ локальной панели:
+          <button type="button" class="btn btn-sm" onclick="this.hidden=true;this.nextElementSibling.hidden=false;">Показать</button>
+          <span class="ds-token" hidden><?= e($sign['local_key']) ?></span></p>
+      <?php endif; ?>
       <?php if (is_admin()): ?>
         <form method="post" onsubmit="return confirm('Старый токен перестанет работать. Новый нужно будет ввести в панели вывески. Продолжить?');">
           <input type="hidden" name="action" value="new_token"><button class="btn btn-sm btn-warn">Выдать новый токен</button>
@@ -696,6 +782,51 @@ require __DIR__ . '/../src/layout_header.php';
     loadBattery(7); window.addEventListener('resize', drawBattery);
   }
 
+  // Прошивка: проверка файла в браузере, загрузка частями по 512 КБ, состояние установки.
+  var fwInfo = <?= json_encode($firmware ? ['seq' => (int) $sign['firmware_seq'], 'version' => $firmware['version']] : null) ?>;
+  function firmwareStatus(r) {
+    var el = document.getElementById('dsFwStatus');
+    if (!el) { return; }
+    var applied = r.applied && r.applied.firmware;
+    if (!fwInfo) { el.textContent = 'В CRM прошивки нет. Загрузите firmware.bin, чтобы обновить вывеску без компьютера.'; return; }
+    if (applied === undefined) { el.textContent = 'Вывеска на ' + (r.version || '?') + ': обновление из CRM работает с 0.4.3. Один раз поставьте 0.4.3 через локальную панель.'; return; }
+    if (applied >= fwInfo.seq) {
+      el.textContent = r.version === fwInfo.version ? (r.trial ? 'Установлена ' + fwInfo.version + ', проверяется первые минуты работы.' : 'Установлена ' + fwInfo.version + '.')
+        : 'Не установилась: вывеска осталась на ' + r.version + '. Причина — в журнале ниже.';
+    } else { el.textContent = 'Ожидает: вывеска скачает ' + fwInfo.version + ' при следующей связи (во сне — до 15 минут), установка займёт около минуты.'; }
+  }
+  var fwFile = document.getElementById('dsFwFile');
+  if (fwFile) {
+    fwFile.addEventListener('change', function () {
+      var file = fwFile.files[0]; fwFile.value = '';
+      if (!file) { return; }
+      file.arrayBuffer().then(function (buf) {
+        var bytes = new Uint8Array(buf);
+        if (bytes.length < 100000 || bytes.length > 0x140000 || bytes[0] !== 0xE9) { throw new Error('Это не firmware.bin для ESP32 или файл больше 1,25 МБ.'); }
+        var text = new TextDecoder('latin1').decode(bytes), m = /AVIORSIGN_VERSION=([0-9A-Za-z.\-]{1,40});/.exec(text);
+        if (!m) { throw new Error('В файле нет метки версии AviorSign: из CRM ставятся прошивки 0.4.3 и новее.'); }
+        if (m[1].indexOf('recovery') >= 0) { throw new Error('Диагностическую прошивку из CRM ставить нельзя — только через USB.'); }
+        if (!confirm('Загрузить прошивку ' + m[1] + ' (' + Math.round(bytes.length / 1024) + ' КБ) и установить на вывеску?')) { return; }
+        var upload = Array.from(crypto.getRandomValues(new Uint8Array(12)), function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+        var size = 512 * 1024, total = Math.ceil(bytes.length / size), bar = document.getElementById('dsFwProgress'), i = 0;
+        bar.hidden = false; bar.value = 0;
+        function next() {
+          var form = new FormData();
+          form.append('csrf_token', csrf); form.append('action', 'firmware_chunk'); form.append('ajax', '1');
+          form.append('upload', upload); form.append('index', i); form.append('total', total);
+          form.append('chunk', new Blob([bytes.slice(i * size, (i + 1) * size)], {type: 'application/octet-stream'}), 'part.bin');
+          return fetch('door_sign.php', {method: 'POST', body: form}).then(function (r) { return r.json(); }).then(function (d) {
+            if (!d.ok) { throw new Error(d.message); }
+            i++; bar.value = i / total;
+            if (i < total) { return next(); }
+            alert(d.message); location.reload();
+          });
+        }
+        return next();
+      }).catch(function (e) { document.getElementById('dsFwProgress').hidden = true; alert(e.message || 'Не удалось загрузить прошивку.'); });
+    });
+  }
+
   // Состояние вывески — раз в 10 секунд, без перезагрузки страницы.
   function pill(text, cls) { var s = document.createElement('span'); s.className = 'ds-pill' + (cls ? ' ' + cls : ''); s.textContent = text; return s; }
   function ago(s) {
@@ -719,6 +850,7 @@ require __DIR__ . '/../src/layout_header.php';
         usb ? 'ok' : b.percent <= 15 ? 'bad' : ''));
     }
     if (r.version) { box.append(pill('Прошивка ' + r.version)); }
+    firmwareStatus(r);
     if (r.automatic) { box.append(pill('Работает по расписанию')); }
     if (r.ip) { document.getElementById('dsLocal').textContent = 'Локальная панель (только из офисной сети): http://' + r.ip + ' — там Wi-Fi и обновление прошивки.'; }
   }
