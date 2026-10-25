@@ -523,7 +523,12 @@ require __DIR__ . '/../src/layout_header.php';
     if (r.displayed) { box.append(pill('На экране: ' + (labels[r.displayed] || 'неизвестно'))); }
     if (r.busy) { box.append(pill('Экран обновляется')); }
     if (r.displayError) { box.append(pill(r.displayError, 'bad')); }
-    if (r.battery) { box.append(pill('АКБ ≈' + r.battery.percent + ' % · ' + (r.battery.mv / 1000).toFixed(2).replace('.', ',') + ' В', r.battery.percent <= 15 ? 'bad' : '')); }
+    if (r.battery) {
+      // charge — с прошивки 0.4.1: charging | full | discharging | unknown (оценка по напряжению).
+      var b = r.battery, v = (b.mv / 1000).toFixed(2).replace('.', ',') + ' В', usb = b.charge === 'charging' || b.charge === 'full';
+      box.append(pill(b.charge === 'charging' ? '⚡ АКБ заряжается · ≈' + b.percent + ' % · ' + v : b.charge === 'full' ? 'АКБ заряжен · ' + v : 'АКБ ≈' + b.percent + ' % · ' + v,
+        usb ? 'ok' : b.percent <= 15 ? 'bad' : ''));
+    }
     if (r.version) { box.append(pill('Прошивка ' + r.version)); }
     if (r.automatic) { box.append(pill('Работает по расписанию')); }
     if (r.ip) { document.getElementById('dsLocal').textContent = 'Локальная панель (только из офисной сети): http://' + r.ip + ' — там Wi-Fi и обновление прошивки.'; }
