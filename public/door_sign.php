@@ -37,6 +37,34 @@ if ($sign && isset($_GET['frame'])) {
     exit;
 }
 
+// История заряда для графика (JSON) и выгрузки (CSV).
+if ($sign && isset($_GET['battery'])) {
+    if ($_GET['battery'] === 'csv') {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="aviorsign-battery-' . date('Y-m-d') . '.csv"');
+        echo "\xEF\xBB\xBFвремя;напряжение, В;до поправки, В;процент;зарядка;экономия\r\n";
+        foreach (door_sign_battery_points((int) $sign['id'], 0) as $p) {
+            echo date('d.m.Y H:i', (int) $p['ts']) . ';' . number_format($p['mv'] / 1000, 3, ',', '') . ';' . number_format($p['raw_mv'] / 1000, 3, ',', '') . ';'
+                . $p['percent'] . ';' . $p['charge'] . ';' . $p['power_save'] . "\r\n";
+        }
+        exit;
+    }
+    $days = max(1, min(400, (int) ($_GET['days'] ?? 7)));
+    $points = door_sign_battery_points((int) $sign['id'], time() - $days * 86400);
+    $step = max(1, (int) ceil(count($points) / 2000));
+    $codes = ['discharging' => 0, 'charging' => 1, 'full' => 2];
+    $out = [];
+    foreach ($points as $k => $p) {
+        if ($k % $step === 0 || $k === count($points) - 1 || ($k > 0 && $p['charge'] !== $points[$k - 1]['charge'])) {
+            $out[] = [(int) $p['ts'], (int) $p['mv'], $p['percent'] === null ? null : (int) $p['percent'], $codes[$p['charge']] ?? -1];
+        }
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode(['points' => $out]);
+    exit;
+}
+
 // Для автообновления блока «Сейчас на двери» без перезагрузки страницы.
 if ($sign && isset($_GET['state'])) {
     header('Content-Type: application/json; charset=utf-8');
@@ -49,6 +77,7 @@ if ($sign && isset($_GET['state'])) {
     exit;
 }
 
+$reported = $sign ? door_sign_reported($sign) : null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = post('action');
     $ajax = post('ajax') === '1';
@@ -118,11 +147,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'set_power') {
-        $enabled = post('power_save') === '1';
+        // auto — с прошивки 0.4.2: экономия только при работе от аккумулятора.
+        $mode = post('power_mode') ?: (post('power_save') === '1' ? 'on' : 'off');
+        if (!in_array($mode, ['auto', 'on', 'off'], true)) {
+            $finish('Неизвестный режим питания.', false);
+        }
         $seq = door_sign_next_seq($signId);
-        db()->prepare('UPDATE door_signs SET power_save = ?, power_seq = ? WHERE id = ?')->execute([$enabled ? 1 : 0, $seq, $signId]);
-        door_sign_log($signId, $userId, 'power', $enabled ? 'Режим экономии включён' : 'Режим экономии выключен');
-        $finish($enabled ? 'Режим экономии включится при следующей связи вывески.' : 'Режим экономии выключится при следующей связи вывески (до 15 минут).');
+        if (array_key_exists('power_auto', $sign)) {
+            db()->prepare('UPDATE door_signs SET power_save = ?, power_auto = ?, power_seq = ? WHERE id = ?')
+                ->execute([$mode === 'on' ? 1 : 0, $mode === 'auto' ? 1 : 0, $seq, $signId]);
+        } elseif ($mode === 'auto') {
+            $finish('Для автоматического режима примените миграцию 2026_10_25_door_sign_battery.sql.', false);
+        } else {
+            db()->prepare('UPDATE door_signs SET power_save = ?, power_seq = ? WHERE id = ?')->execute([$mode === 'on' ? 1 : 0, $seq, $signId]);
+        }
+        $labels = ['auto' => 'Экономия — автоматически по питанию', 'on' => 'Режим экономии включён', 'off' => 'Режим экономии выключен'];
+        door_sign_log($signId, $userId, 'power', $labels[$mode]);
+        $finish($labels[$mode] . '. Вывеска получит это при следующей связи (во сне — до 15 минут).');
+    }
+
+    if (in_array($action, ['battery_scale', 'battery_curve', 'battery_reset'], true)) {
+        if (!array_key_exists('battery_seq', $sign)) {
+            $finish('Сначала примените миграцию 2026_10_25_door_sign_battery.sql.', false);
+        }
+        $scale = (int) $sign['battery_scale'];
+        $curve = $sign['battery_curve'];
+        if ($action === 'battery_scale') {
+            // Поправка = мультиметр / показание вывески до поправки (raw приходит с прошивки 0.4.2).
+            $meter = (int) round((float) str_replace(',', '.', post('meter_volts')) * 1000);
+            $raw = (int) ($reported['battery']['raw'] ?? 0);
+            if ($raw <= 0) {
+                $finish('Нужна прошивка 0.4.2: старая не присылает напряжение до поправки.', false);
+            }
+            if ($meter < 2500 || $meter > 4500) {
+                $finish('Введите показание мультиметра в вольтах, например 4,18.', false);
+            }
+            $scale = (int) round($meter * 1000 / $raw);
+            if ($scale < 900 || $scale > 1100) {
+                $finish('Расхождение больше 10 % — проверьте замер: мультиметр на выводах аккумулятора, в ту же минуту, когда экран не обновлялся.', false);
+            }
+            $detail = 'Поправка напряжения ×' . number_format($scale / 1000, 3, ',', '') . ' (мультиметр ' . number_format($meter / 1000, 2, ',', '') . ' В)';
+        } elseif ($action === 'battery_curve') {
+            $cycle = door_sign_battery_cycle(door_sign_battery_points($signId, time() - 60 * 86400));
+            if (!$cycle || !$cycle['curve']) {
+                $finish('Полного цикла разряда пока нет — смотрите подсказку в блоке «Аккумулятор».', false);
+            }
+            $curve = json_encode($cycle['curve']);
+            $detail = 'Своя кривая разряда по циклу ' . $cycle['hours'] . ' ч: ' . number_format($cycle['fromMv'] / 1000, 2, ',', '') . ' → '
+                . number_format($cycle['toMv'] / 1000, 2, ',', '') . ' В';
+        } else {
+            $scale = 1000;
+            $curve = null;
+            $detail = 'Калибровка аккумулятора сброшена';
+        }
+        $seq = door_sign_next_seq($signId);
+        db()->prepare('UPDATE door_signs SET battery_scale = ?, battery_curve = ?, battery_seq = ? WHERE id = ?')->execute([$scale, $curve, $seq, $signId]);
+        door_sign_log($signId, $userId, 'battery', $detail);
+        $finish($detail . '. Вывеска применит при следующей связи.');
     }
 
     if ($action === 'wake') {
@@ -182,7 +263,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $finish('Неизвестное действие.', false);
 }
 
-$reported = $sign ? door_sign_reported($sign) : null;
 $assets = [];
 $log = [];
 $shownToken = $_SESSION['door_sign_token'] ?? null;
@@ -199,6 +279,9 @@ if ($sign) {
     );
     $stmt->execute([$sign['id']]);
     $log = $stmt->fetchAll();
+    $batteryReady = array_key_exists('battery_seq', $sign);
+    $cycle = $batteryReady ? door_sign_battery_cycle(door_sign_battery_points((int) $sign['id'], time() - 60 * 86400)) : null;
+    $curveSaved = json_decode((string) ($sign['battery_curve'] ?? ''), true);
 }
 // Расписание для редактора: заданное в CRM, иначе то, что сейчас на вывеске.
 $schedule = $sign && $sign['schedule_json'] ? json_decode($sign['schedule_json'], true)
@@ -230,6 +313,8 @@ require __DIR__ . '/../src/layout_header.php';
 .ds-event select,.ds-event input{padding:8px;border:1px solid var(--border);border-radius:6px;font:inherit;}
 .ds-file{position:relative;overflow:hidden;}
 .ds-file input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.ds-chart{position:relative;}.ds-chart canvas{width:100%;height:260px;display:block;border:1px solid var(--border);border-radius:8px;background:#fff;}
+.ds-tip{position:absolute;top:8px;pointer-events:none;background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;box-shadow:0 4px 12px #0002;white-space:nowrap;}
 .ds-token{font-family:monospace;font-size:15px;background:#fff8e1;border:1px dashed #d4a20b;padding:10px;border-radius:6px;word-break:break-all;}
 @media(max-width:900px){.ds-grid{grid-template-columns:1fr;}.ds-tiles{grid-template-columns:1fr 1fr;}.ds-event{grid-template-columns:1fr 1fr;}}
 </style>
@@ -284,12 +369,18 @@ require __DIR__ . '/../src/layout_header.php';
       </div>
       <p class="ds-muted" style="margin-top:10px;">Выбор статуса вручную выключает расписание на вывеске — как и в её локальной панели.</p>
       <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px;">
-        <form method="post" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <input type="hidden" name="action" value="set_power"><input type="hidden" name="power_save" value="<?= $sign['power_save'] ? '0' : '1' ?>">
-          <span style="font-size:14px;flex:1;min-width:200px;">Экономия заряда: <b><?= $sign['power_save'] ? 'включена' : 'выключена' ?></b>
-            <span class="ds-muted"><br>Для работы от аккумулятора: вывеска спит и выходит на связь раз в 15 минут.</span></span>
-          <button class="btn btn-sm"><?= $sign['power_save'] ? 'Выключить' : 'Включить' ?></button>
+        <?php $powerMode = !empty($sign['power_auto']) ? 'auto' : ($sign['power_save'] ? 'on' : 'off'); ?>
+        <form method="post" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
+          <input type="hidden" name="action" value="set_power">
+          <label class="field" style="flex:1;min-width:220px;margin:0;">Экономия заряда
+            <select name="power_mode">
+              <?php if (array_key_exists('power_auto', $sign)): ?><option value="auto" <?= $powerMode === 'auto' ? 'selected' : '' ?>>Автоматически: от USB — нет, от аккумулятора — да</option><?php endif; ?>
+              <option value="on" <?= $powerMode === 'on' ? 'selected' : '' ?>>Всегда включена</option>
+              <option value="off" <?= $powerMode === 'off' ? 'selected' : '' ?>>Выключена</option>
+            </select></label>
+          <button class="btn btn-sm">Сохранить</button>
         </form>
+        <p class="ds-muted" style="margin:6px 0 0;">В экономии вывеска спит и выходит на связь раз в 15 минут. Автоматический режим — с прошивки 0.4.2.</p>
         <form method="post" id="dsWake" style="margin-top:10px;" <?= empty($reported['powerSave']) ? 'hidden' : '' ?>>
           <input type="hidden" name="action" value="wake">
           <button class="btn btn-sm btn-primary">Разбудить на 10 минут</button>
@@ -310,6 +401,60 @@ require __DIR__ . '/../src/layout_header.php';
       </form>
       <p class="ds-muted" style="margin-top:10px;">QR-код ставится справа внизу на всех картинках (квадрат около 100 px над нижней строкой), на своих — на белой подложке с подписью «Связаться». Оставляйте это место свободным.</p>
     </div>
+  </div>
+
+  <div class="ds-box" style="margin-bottom:24px;" id="dsBattery">
+    <h3>Аккумулятор</h3>
+    <?php if (!$batteryReady): ?>
+      <p class="ds-muted">История заряда и калибровка включатся после миграции <code>sql/migrations/2026_10_25_door_sign_battery.sql</code>.</p>
+    <?php else: ?>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+        <?php foreach ([1 => 'Сутки', 7 => 'Неделя', 30 => 'Месяц', 400 => 'Всё'] as $d => $label): ?>
+          <button type="button" class="btn btn-sm" data-days="<?= $d ?>"><?= $label ?></button>
+        <?php endforeach; ?>
+        <a class="btn btn-sm" href="door_sign.php?battery=csv">Скачать CSV</a>
+      </div>
+      <div class="ds-chart"><canvas id="dsBatChart" height="260"></canvas><div class="ds-tip" id="dsBatTip" hidden></div></div>
+      <p class="ds-muted" id="dsBatInfo">Точка сохраняется раз в 10 минут и при смене зарядки. Синим — напряжение, серым пунктиром — процент; жёлтым фоном — зарядка, зелёным — заряжен и на USB.</p>
+      <div class="ds-grid" style="margin:14px 0 0;">
+        <div>
+          <h4 style="margin:0 0 6px;">1. Поправка напряжения</h4>
+          <p class="ds-muted" style="margin:0 0 8px;">Измерьте мультиметром напряжение на выводах аккумулятора и сразу введите (экран в этот момент не должен обновляться).
+            Сейчас вывеска показывает <b><?= isset($reported['battery']['mv']) ? number_format($reported['battery']['mv'] / 1000, 2, ',', '') . ' В' : '—' ?></b>,
+            поправка <b>×<?= number_format((int) $sign['battery_scale'] / 1000, 3, ',', '') ?></b>.</p>
+          <form method="post" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
+            <input type="hidden" name="action" value="battery_scale">
+            <label class="field" style="margin:0;max-width:160px;">Мультиметр, В<input name="meter_volts" inputmode="decimal" placeholder="4,18" required></label>
+            <button class="btn btn-sm btn-primary">Применить</button>
+          </form>
+        </div>
+        <div>
+          <h4 style="margin:0 0 6px;">2. Своя кривая разряда</h4>
+          <p class="ds-muted" style="margin:0 0 8px;">
+          <?php if ($cycle === null): ?>
+            Цикла ещё нет. Зарядите аккумулятор до конца (в CRM будет «АКБ заряжен»), затем отключите USB и оставьте вывеску работать
+            в режиме экономии, пока напряжение не опустится до 3,50 В. После этого поставьте на зарядку и нажмите кнопку ниже.
+          <?php elseif (!$cycle['complete']): ?>
+            Идёт цикл разряда: <?= e($cycle['hours']) ?> ч, <?= number_format($cycle['fromMv'] / 1000, 2, ',', '') ?> → <?= number_format($cycle['toMv'] / 1000, 2, ',', '') ?> В.
+            Кривая будет готова, когда напряжение опустится до 3,50 В (цикл должен начаться с полной зарядки, не ниже 4,10 В, и длиться не меньше 6 часов).
+          <?php else: ?>
+            Полный цикл: <?= e($cycle['hours']) ?> ч (≈<?= e(round($cycle['hours'] / 24, 1)) ?> дн), <?= number_format($cycle['fromMv'] / 1000, 2, ',', '') ?> → <?= number_format($cycle['toMv'] / 1000, 2, ',', '') ?> В.
+            По нему 0 % — напряжение в конце цикла, 100 % — после полной зарядки.
+          <?php endif; ?>
+          </p>
+          <?php if ($cycle && $cycle['curve']): ?>
+            <div class="ds-state" style="margin:0;"><?php foreach ($cycle['curve'] as $k => $mv): ?><span class="ds-pill"><?= $k * 10 ?> % — <?= number_format($mv / 1000, 2, ',', '') ?> В</span><?php endforeach; ?></div>
+            <form method="post" style="margin-top:8px;"><input type="hidden" name="action" value="battery_curve"><button class="btn btn-sm btn-primary">Отправить кривую на вывеску</button></form>
+          <?php endif; ?>
+          <p class="ds-muted" style="margin:8px 0 0;">Сейчас на вывеске: <?= is_array($curveSaved) ? 'своя кривая из CRM' : 'типовая кривая Li-ion' ?><?= (int) $sign['battery_scale'] !== 1000 ? ', поправка напряжения' : '' ?>.
+            Нужна прошивка 0.4.2.</p>
+          <?php if (is_array($curveSaved) || (int) $sign['battery_scale'] !== 1000): ?>
+            <form method="post" onsubmit="return confirm('Вернуть типовую кривую и убрать поправку напряжения?');" style="margin-top:6px;">
+              <input type="hidden" name="action" value="battery_reset"><button class="btn btn-sm btn-warn">Сбросить калибровку</button></form>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endif; ?>
   </div>
 
   <div class="ds-box" style="margin-bottom:24px;">
@@ -506,6 +651,50 @@ require __DIR__ . '/../src/layout_header.php';
     if (enabled && !list.length) { ev.preventDefault(); alert('Добавьте хотя бы одно событие.'); return; }
     document.getElementById('dsScheduleJson').value = JSON.stringify({enabled: enabled, utcOffsetMinutes: Number(document.getElementById('dsTz').value), events: list});
   });
+
+  // График заряда: напряжение (синим), процент (пунктиром), фон — зарядка/заряжен.
+  var chart = document.getElementById('dsBatChart'), tip = document.getElementById('dsBatTip'), batPoints = [];
+  function drawBattery() {
+    if (!chart) { return; }
+    var w = chart.clientWidth, h = 260, dpr = window.devicePixelRatio || 1, ctx = chart.getContext('2d');
+    chart.width = w * dpr; chart.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+    ctx.font = '11px system-ui'; ctx.fillStyle = '#6b7280';
+    if (batPoints.length < 2) { ctx.textAlign = 'center'; ctx.fillText('Точек пока мало: история копится по мере связи вывески с CRM.', w / 2, h / 2); return; }
+    var L = 44, R = 36, T = 10, B = 24, t0 = batPoints[0][0], t1 = batPoints[batPoints.length - 1][0];
+    var vs = batPoints.map(function (p) { return p[1]; }), vmin = Math.max(3000, Math.min.apply(null, vs) - 50), vmax = Math.min(4500, Math.max.apply(null, vs) + 50);
+    var X = function (t) { return L + (t - t0) / Math.max(1, t1 - t0) * (w - L - R); }, Y = function (mv) { return T + (vmax - mv) / (vmax - vmin) * (h - T - B); };
+    var P = function (p) { return T + (100 - p) / 100 * (h - T - B); };
+    for (var i = 1; i < batPoints.length; i++) {
+      var c = batPoints[i - 1][3];
+      if (c === 1 || c === 2) { ctx.fillStyle = c === 1 ? '#fff4c2' : '#e1f3e4'; ctx.fillRect(X(batPoints[i - 1][0]), T, X(batPoints[i][0]) - X(batPoints[i - 1][0]), h - T - B); }
+    }
+    ctx.strokeStyle = '#e5e7eb'; ctx.fillStyle = '#6b7280'; ctx.lineWidth = 1; ctx.textAlign = 'right';
+    for (var v = Math.ceil(vmin / 100) * 100; v <= vmax; v += 100) { ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(w - R, Y(v)); ctx.stroke(); ctx.fillText((v / 1000).toFixed(1).replace('.', ',') + ' В', L - 4, Y(v) + 4); }
+    ctx.textAlign = 'left'; [0, 50, 100].forEach(function (p) { ctx.fillText(p + ' %', w - R + 4, P(p) + 4); });
+    ctx.textAlign = 'center';
+    var ticks = w < 520 ? 2 : 4;
+    for (var k = 0; k <= ticks; k++) { var t = t0 + (t1 - t0) * k / ticks, d = new Date(t * 1000); ctx.fillText(d.toLocaleString('ru-RU', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'}), Math.min(w - R - 30, Math.max(L + 30, X(t))), h - 6); }
+    ctx.setLineDash([4, 3]); ctx.strokeStyle = '#9ca3af'; ctx.beginPath(); var started = false;
+    batPoints.forEach(function (p) { if (p[2] === null) { return; } if (started) { ctx.lineTo(X(p[0]), P(p[2])); } else { ctx.moveTo(X(p[0]), P(p[2])); started = true; } }); ctx.stroke();
+    ctx.setLineDash([]); ctx.strokeStyle = '#1f3a8a'; ctx.lineWidth = 2; ctx.beginPath();
+    batPoints.forEach(function (p, j) { if (j) { ctx.lineTo(X(p[0]), Y(p[1])); } else { ctx.moveTo(X(p[0]), Y(p[1])); } }); ctx.stroke();
+    chart.onmousemove = function (ev) {
+      var x = ev.offsetX, best = batPoints[0];
+      batPoints.forEach(function (p) { if (Math.abs(X(p[0]) - x) < Math.abs(X(best[0]) - x)) { best = p; } });
+      tip.hidden = false; tip.style.left = Math.min(w - 190, Math.max(0, X(best[0]) - 90)) + 'px';
+      tip.textContent = new Date(best[0] * 1000).toLocaleString('ru-RU', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'}) + ' · '
+        + (best[1] / 1000).toFixed(2).replace('.', ',') + ' В' + (best[2] !== null ? ' · ' + best[2] + ' %' : '') + (best[3] === 1 ? ' · зарядка' : best[3] === 2 ? ' · заряжен' : '');
+    };
+    chart.onmouseleave = function () { tip.hidden = true; };
+  }
+  function loadBattery(days) {
+    fetch('door_sign.php?battery=json&days=' + days, {cache: 'no-store'}).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d) { batPoints = d.points; drawBattery(); } }).catch(function () {});
+  }
+  if (chart) {
+    document.querySelectorAll('#dsBattery [data-days]').forEach(function (b) { b.onclick = function () { loadBattery(b.dataset.days); }; });
+    loadBattery(7); window.addEventListener('resize', drawBattery);
+  }
 
   // Состояние вывески — раз в 10 секунд, без перезагрузки страницы.
   function pill(text, cls) { var s = document.createElement('span'); s.className = 'ds-pill' + (cls ? ' ' + cls : ''); s.textContent = text; return s; }

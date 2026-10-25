@@ -57,6 +57,8 @@ if ($previous !== null && $eventsAck === null) {
 db()->prepare('UPDATE door_signs SET reported_json = ?, last_seen_at = ?, last_ip = ? WHERE id = ?')
     ->execute([json_encode($report, JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'] ?? null, $sign['id']]);
 
+door_sign_store_battery($sign, $report);
+
 $out = door_sign_commands($sign);
 if ($eventsAck !== null) {
     $out['eventsAck'] = $eventsAck;

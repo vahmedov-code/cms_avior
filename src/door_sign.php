@@ -144,6 +144,13 @@ function door_sign_commands(array $sign): array
     }
     if ((int) $sign['power_seq'] > 0) {
         $out['power'] = ['seq' => (int) $sign['power_seq'], 'enabled' => (bool) $sign['power_save']];
+        if (array_key_exists('power_auto', $sign)) {
+            $out['power']['auto'] = (bool) $sign['power_auto'];
+        }
+    }
+    if ((int) ($sign['battery_seq'] ?? 0) > 0) {
+        $curve = json_decode((string) ($sign['battery_curve'] ?? ''), true);
+        $out['battery'] = ['seq' => (int) $sign['battery_seq'], 'scale' => (int) $sign['battery_scale'], 'curve' => is_array($curve) ? $curve : null];
     }
     if ((int) $sign['wake_seq'] > 0) {
         $out['wake'] = ['seq' => (int) $sign['wake_seq']];
@@ -221,6 +228,108 @@ function door_sign_store_events(array $sign, $log): ?int
         db()->prepare('UPDATE door_signs SET events_seq = ? WHERE id = ?')->execute([$last, $sign['id']]);
     }
     return $last;
+}
+
+/**
+ * История заряда (миграция 2026_10_25_door_sign_battery.sql): точка раз в 10 минут, при смене
+ * состояния зарядки и при скачке напряжения. Без таблицы ничего не делает.
+ */
+function door_sign_store_battery(array $sign, array $report): void
+{
+    $b = $report['battery'] ?? null;
+    if (!is_array($b) || !isset($b['mv']) || (int) $b['mv'] < 2000 || (int) $b['mv'] > 5000) {
+        return;
+    }
+    $raw = (int) ($b['raw'] ?? $b['mv']);
+    $charge = isset($b['charge']) ? substr(preg_replace('/[^a-z]/', '', (string) $b['charge']), 0, 12) : null;
+    try {
+        $stmt = db()->prepare('SELECT ts, raw_mv, charge FROM door_sign_battery WHERE sign_id = ? ORDER BY ts DESC LIMIT 1');
+        $stmt->execute([$sign['id']]);
+        $last = $stmt->fetch();
+        if ($last && time() - (int) $last['ts'] < 600 && $last['charge'] === $charge && abs((int) $last['raw_mv'] - $raw) < 40) {
+            return;
+        }
+        db()->prepare('INSERT INTO door_sign_battery (sign_id, ts, mv, raw_mv, percent, charge, power_save) VALUES (?, ?, ?, ?, ?, ?, ?)')
+            ->execute([$sign['id'], time(), (int) $b['mv'], $raw, isset($b['percent']) ? max(0, min(100, (int) $b['percent'])) : null,
+                $charge, !empty($report['powerSave']) ? 1 : 0]);
+    } catch (PDOException $e) {
+        // Миграция истории заряда ещё не применена.
+    }
+}
+
+/** Точки истории заряда начиная с $since, по времени. Пустой массив без миграции. */
+function door_sign_battery_points(int $signId, int $since): array
+{
+    try {
+        $stmt = db()->prepare('SELECT ts, mv, raw_mv, percent, charge, power_save FROM door_sign_battery WHERE sign_id = ? AND ts >= ? ORDER BY ts');
+        $stmt->execute([$signId, $since]);
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
+/**
+ * Последний цикл разряда для калибровки процента: от отключения USB после зарядки до
+ * следующей зарядки или до последней точки. Нагрузка в работе почти постоянная, поэтому
+ * доля прошедшего времени ≈ доле израсходованного заряда: напряжение в момент, когда прошло
+ * 10 % времени цикла, — это 90 % и т.д. Кривая — в raw мВ (до поправки напряжения), чтобы
+ * поправка её не сдвигала. Цикл годится, если начался не ниже 4,10 В, длился не меньше
+ * 6 часов и дошёл до 3,50 В или ниже.
+ */
+function door_sign_battery_cycle(array $points): ?array
+{
+    $usb = function ($p): bool { return in_array($p['charge'], ['charging', 'full'], true); };
+    $start = null;
+    for ($i = count($points) - 1; $i > 0; $i--) {
+        if (!$usb($points[$i]) && $usb($points[$i - 1])) {
+            $start = $i;
+            break;
+        }
+    }
+    if ($start === null) {
+        return null;
+    }
+    $cycle = [];
+    for ($i = $start; $i < count($points) && !$usb($points[$i]); $i++) {
+        $cycle[] = ['t' => (int) $points[$i]['ts'], 'mv' => (int) $points[$i]['raw_mv']];
+    }
+    // Медиана по 5 соседним точкам убирает провалы под нагрузкой.
+    $smooth = [];
+    foreach ($cycle as $k => $p) {
+        $win = array_column(array_slice($cycle, max(0, $k - 2), 5), 'mv');
+        sort($win);
+        $smooth[] = ['t' => $p['t'], 'mv' => $win[intdiv(count($win), 2)]];
+    }
+    $first = $smooth[0];
+    $last = $smooth[count($smooth) - 1];
+    $hours = ($last['t'] - $first['t']) / 3600;
+    $result = ['start' => $first['t'], 'end' => $last['t'], 'hours' => round($hours, 1), 'fromMv' => $first['mv'],
+        'toMv' => min(array_column($smooth, 'mv')), 'ended' => $i < count($points), 'curve' => null,
+        'complete' => $first['mv'] >= 4100 && $hours >= 6 && min(array_column($smooth, 'mv')) <= 3500];
+    if (!$result['complete']) {
+        return $result;
+    }
+    $curve = [];
+    for ($k = 0; $k <= 10; $k++) {
+        $t = $first['t'] + (1 - $k / 10) * ($last['t'] - $first['t']);
+        $mv = $last['mv'];
+        for ($j = 1; $j < count($smooth); $j++) {
+            if ($smooth[$j]['t'] >= $t) {
+                $a = $smooth[$j - 1];
+                $b = $smooth[$j];
+                $mv = $b['t'] > $a['t'] ? $a['mv'] + ($b['mv'] - $a['mv']) * ($t - $a['t']) / ($b['t'] - $a['t']) : $b['mv'];
+                break;
+            }
+        }
+        $curve[$k] = (int) round($mv);
+    }
+    $curve[0] = min($curve[0], $result['toMv']);
+    for ($k = 1; $k <= 10; $k++) {
+        $curve[$k] = max($curve[$k], $curve[$k - 1] + 1);   // строго по возрастанию, как требует прошивка
+    }
+    $result['curve'] = $curve;
+    return $result;
 }
 
 /** События вывески, которые стоит выделить в журнале. */

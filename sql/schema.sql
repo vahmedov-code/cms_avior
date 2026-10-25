@@ -290,6 +290,10 @@ CREATE TABLE IF NOT EXISTS door_signs (
     power_seq      INT UNSIGNED NOT NULL DEFAULT 0,
     wake_seq       INT UNSIGNED NOT NULL DEFAULT 0,   -- «Разбудить»: вывеска 10 минут не спит
     events_seq     INT UNSIGNED NOT NULL DEFAULT 0,   -- последнее событие из журнала вывески, сохранённое в door_sign_log
+    battery_scale  SMALLINT UNSIGNED NOT NULL DEFAULT 1000, -- поправка напряжения по мультиметру, тысячные
+    battery_curve  VARCHAR(120) NULL,                 -- своя кривая разряда: 11 значений raw мВ для 0..100 %
+    battery_seq    INT UNSIGNED NOT NULL DEFAULT 0,
+    power_auto     TINYINT(1) NOT NULL DEFAULT 1,     -- экономия по источнику питания (прошивка 0.4.2+)
     reported_json  TEXT NULL,                         -- последнее состояние, присланное вывеской
     last_seen_at   DATETIME NULL,
     last_ip        VARCHAR(45) NULL,
@@ -318,6 +322,19 @@ CREATE TABLE IF NOT EXISTS door_sign_log (
     KEY idx_door_sign_log_sign (sign_id, created_at),
     CONSTRAINT fk_door_sign_log_sign FOREIGN KEY (sign_id) REFERENCES door_signs(id) ON DELETE CASCADE,
     CONSTRAINT fk_door_sign_log_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS door_sign_battery (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    sign_id     INT UNSIGNED NOT NULL,
+    ts          INT UNSIGNED NOT NULL,
+    mv          SMALLINT UNSIGNED NOT NULL,
+    raw_mv      SMALLINT UNSIGNED NOT NULL,
+    percent     TINYINT UNSIGNED NULL,
+    charge      VARCHAR(12) NULL,
+    power_save  TINYINT(1) NOT NULL DEFAULT 0,
+    KEY idx_door_sign_battery (sign_id, ts),
+    CONSTRAINT fk_door_sign_battery_sign FOREIGN KEY (sign_id) REFERENCES door_signs(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 SET FOREIGN_KEY_CHECKS = 1;
