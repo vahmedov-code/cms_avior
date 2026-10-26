@@ -353,7 +353,7 @@ if ($sign) {
         $assets[$a['slot']] = (bool) $a['present'];
     }
     $stmt = db()->prepare(
-        'SELECT l.created_at, l.action, l.detail, u.full_name FROM door_sign_log l
+        'SELECT UNIX_TIMESTAMP(l.created_at) AS ts, l.action, l.detail, u.full_name FROM door_sign_log l
          LEFT JOIN users u ON u.id = l.user_id WHERE l.sign_id = ? ORDER BY l.created_at DESC, l.id DESC LIMIT 60'
     );
     $stmt->execute([$sign['id']]);
@@ -448,7 +448,7 @@ require __DIR__ . '/../src/layout_header.php';
           </form>
         <?php endforeach; ?>
       </div>
-      <p class="ds-muted" style="margin-top:10px;">Выбор статуса вручную выключает расписание на вывеске — как и в её локальной панели.</p>
+      <p class="ds-muted" style="margin-top:10px;">Выбранный вручную статус держится до следующего события расписания (прошивка 0.4.5+), потом расписание снова управляет само.</p>
       <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px;">
         <?php $powerMode = !empty($sign['power_auto']) ? 'auto' : ($sign['power_save'] ? 'on' : 'off'); ?>
         <form method="post" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
@@ -613,7 +613,7 @@ require __DIR__ . '/../src/layout_header.php';
           <thead><tr><th>Когда</th><th>Что</th><th>Кто</th></tr></thead>
           <tbody>
           <?php foreach ($log as $row): $fault = door_sign_event_is_fault((string) $row['action']); ?>
-            <tr<?= $fault ? ' class="ds-fault"' : '' ?>><td style="white-space:nowrap;"><?= e(date('d.m H:i:s', strtotime((string) $row['created_at']))) ?></td><td><?= e($row['detail'] ?? $row['action']) ?></td><td><?= e($row['full_name'] ?? 'вывеска') ?></td></tr>
+            <tr<?= $fault ? ' class="ds-fault"' : '' ?>><td style="white-space:nowrap;"><?= e(date('d.m H:i:s', (int) $row['ts'])) ?></td><td><?= e($row['detail'] ?? $row['action']) ?></td><td><?= e($row['full_name'] ?? 'вывеска') ?></td></tr>
           <?php endforeach; ?>
           </tbody>
         </table></div>
@@ -889,7 +889,8 @@ require __DIR__ . '/../src/layout_header.php';
     }
     if (r.version) { box.append(pill('Прошивка ' + r.version)); }
     firmwareStatus(r);
-    if (r.automatic) { box.append(pill('Работает по расписанию')); }
+    if (r.automatic) { box.append(pill(r.manualUntilEvent ? 'Расписание: ручной статус до следующего события' : 'Работает по расписанию')); }
+    else if (r.version) { box.append(pill('Расписание выключено', 'bad')); }
     if (r.ip) { document.getElementById('dsLocal').textContent = 'Локальная панель (только из офисной сети): http://' + r.ip + ' — там Wi-Fi и обновление прошивки.'; }
   }
   function poll() {
