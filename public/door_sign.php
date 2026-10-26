@@ -65,6 +65,21 @@ if ($sign && isset($_GET['battery'])) {
     exit;
 }
 
+// Весь журнал вывески одним файлом (CSV для Excel).
+if ($sign && ($_GET['journal'] ?? '') === 'csv') {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="aviorsign-journal-' . date('Y-m-d') . '.csv"');
+    echo "\xEF\xBB\xBFвремя;событие;что;кто\r\n";
+    $stmt = db()->prepare('SELECT UNIX_TIMESTAMP(l.created_at) AS ts, l.action, l.detail, u.full_name FROM door_sign_log l
+        LEFT JOIN users u ON u.id = l.user_id WHERE l.sign_id = ? ORDER BY l.created_at, l.id');
+    $stmt->execute([$sign['id']]);
+    $cell = function ($v): string { return '"' . str_replace('"', '""', (string) $v) . '"'; };
+    foreach ($stmt as $row) {
+        echo date('d.m.Y H:i:s', (int) $row['ts']) . ';' . $cell($row['action']) . ';' . $cell($row['detail'] ?? '') . ';' . $cell($row['full_name'] ?? 'вывеска') . "\r\n";
+    }
+    exit;
+}
+
 // Для автообновления блока «Сейчас на двери» без перезагрузки страницы.
 if ($sign && isset($_GET['state'])) {
     header('Content-Type: application/json; charset=utf-8');
@@ -594,7 +609,7 @@ require __DIR__ . '/../src/layout_header.php';
       <div id="dsEvents"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button type="button" class="btn" id="dsAddEvent">+ Событие</button>
-        <button type="button" class="btn" id="dsWeekdays">Шаблон: Пн–Пт 10:00–20:00</button>
+        <button type="button" class="btn" id="dsWeekdays">Шаблон: Пн–Пт 10–21, Сб–Вс 12–20</button>
         <button type="submit" class="btn btn-primary" data-enabled="1">Сохранить и включить</button>
         <button type="submit" class="btn" data-enabled="0">Сохранить выключенным</button>
       </div>
@@ -605,7 +620,7 @@ require __DIR__ . '/../src/layout_header.php';
 
   <div class="ds-grid">
     <div class="ds-box">
-      <h3>Журнал</h3>
+      <h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px;">Журнал <a class="btn btn-sm" href="door_sign.php?journal=csv">Скачать весь журнал (CSV)</a></h3>
       <p class="ds-muted" style="margin:-6px 0 10px;">Действия в CRM и события самой вывески (прошивка 0.4.0+): перезапуски и их причины,
         пропадания Wi-Fi, ошибки связи, обновления экрана. Сбои выделены красным.</p>
       <?php if (!$log): ?><p class="ds-muted">Пока пусто.</p><?php else: ?>
@@ -761,7 +776,9 @@ require __DIR__ . '/../src/layout_header.php';
   document.getElementById('dsAddEvent').onclick = function () { addEvent(); };
   document.getElementById('dsWeekdays').onclick = function () {
     events.replaceChildren();
-    for (var d = 1; d <= 5; d++) { addEvent({day: d, minute: 600, status: 'open'}); addEvent({day: d, minute: 1200, status: 'closed'}); }
+    // Часы работы АВИОР: будни 10:00–21:00, суббота и воскресенье 12:00–20:00.
+    for (var d = 1; d <= 5; d++) { addEvent({day: d, minute: 600, status: 'open'}); addEvent({day: d, minute: 1260, status: 'closed'}); }
+    [6, 0].forEach(function (d) { addEvent({day: d, minute: 720, status: 'open'}); addEvent({day: d, minute: 1200, status: 'closed'}); });
   };
   var form = document.getElementById('dsScheduleForm'), enabled = true;
   form.querySelectorAll('button[type=submit]').forEach(function (b) { b.onclick = function () { enabled = b.dataset.enabled === '1'; }; });
