@@ -327,11 +327,34 @@ function door_sign_battery_points(int $signId, int $since): array
 function door_sign_battery_cycle(array $points): ?array
 {
     $usb = function ($p): bool { return in_array($p['charge'], ['charging', 'full'], true); };
+    // Начало цикла — конец последней настоящей зарядки: короткие «зарядки» до 20 минут
+    // (ложное срабатывание после перезапусков или нажатия кнопки) не считаются.
     $start = null;
-    for ($i = count($points) - 1; $i > 0; $i--) {
+    for ($i = count($points) - 1; $i > 0 && $start === null; $i--) {
         if (!$usb($points[$i]) && $usb($points[$i - 1])) {
-            $start = $i;
-            break;
+            $j = $i - 1;
+            while ($j > 0 && $usb($points[$j - 1])) {
+                $j--;
+            }
+            if ((int) $points[$i - 1]['ts'] - (int) $points[$j]['ts'] >= 1200) {
+                $start = $i;
+            }
+        }
+    }
+    if ($start !== null) {
+        // Короткие ложные «зарядки» внутри цикла его не прерывают.
+        foreach ($points as $k => $p) {
+            if ($k > $start && $usb($p)) {
+                $j = $k;
+                while ($j + 1 < count($points) && $usb($points[$j + 1])) {
+                    $j++;
+                }
+                if ((int) $points[$j]['ts'] - (int) $p['ts'] < 1200 && $j + 1 < count($points)) {
+                    for ($m = $k; $m <= $j; $m++) {
+                        $points[$m]['charge'] = 'discharging';
+                    }
+                }
+            }
         }
     }
     if ($start === null) {
