@@ -310,7 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = (string) file_get_contents($path);
         @unlink($path);
         unset($_SESSION['door_sign_fw']);
-        $check = door_sign_check_firmware($data);
+        $check = door_sign_check_firmware($data, max(0x140000, min(0x400000, (int) ($reported['otaSlot'] ?? 0x140000))));
         if (isset($check['error'])) {
             $finish($check['error'], false);
         }
@@ -857,7 +857,8 @@ require __DIR__ . '/../src/layout_header.php';
       if (!file) { return; }
       file.arrayBuffer().then(function (buf) {
         var bytes = new Uint8Array(buf);
-        if (bytes.length < 100000 || bytes.length > 0x140000 || bytes[0] !== 0xE9) { throw new Error('Это не firmware.bin для ESP32 или файл больше 1,25 МБ.'); }
+        var slot = <?= max(0x140000, min(0x400000, (int) ($reported['otaSlot'] ?? 0x140000))) ?>;
+        if (bytes.length < 100000 || bytes.length > slot || bytes[0] !== 0xE9) { throw new Error('Это не firmware.bin для ESP32 или файл больше раздела прошивки на вывеске.'); }
         var text = new TextDecoder('latin1').decode(bytes), m = /AVIORSIGN_VERSION=([0-9A-Za-z.\-]{1,40});/.exec(text);
         if (!m) { throw new Error('В файле нет метки версии AviorSign: из CRM ставятся прошивки 0.4.3 и новее.'); }
         if (m[1].indexOf('recovery') >= 0) { throw new Error('Диагностическую прошивку из CRM ставить нельзя — только через USB.'); }

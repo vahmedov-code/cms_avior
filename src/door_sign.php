@@ -195,10 +195,11 @@ function door_sign_firmware_info(int $signId): ?array
  * раздел OTA 0x140000, несёт метку AVIORSIGN_VERSION=…; (прошивка 0.4.3+) и это не
  * диагностическая сборка — та отключает связь с CRM. Возвращает версию или текст ошибки.
  */
-function door_sign_check_firmware(string $data): array
+function door_sign_check_firmware(string $data, int $slot = 0x140000): array
 {
-    if (strlen($data) < 100000 || strlen($data) > 0x140000 || ord($data[0]) !== 0xE9) {
-        return ['error' => 'Это не firmware.bin для ESP32 или файл больше раздела прошивки (1,25 МБ).'];
+    // $slot — размер раздела прошивки, который присылает вывеска (0.4.7+); у старых — 1,25 МБ.
+    if (strlen($data) < 100000 || strlen($data) > $slot || ord($data[0]) !== 0xE9) {
+        return ['error' => 'Это не firmware.bin для ESP32 или файл больше раздела прошивки на вывеске (' . number_format($slot / 1048576, 2, ',', '') . ' МБ).'];
     }
     if (!preg_match('/AVIORSIGN_VERSION=([0-9A-Za-z.\-]{1,40});/', $data, $m)) {
         return ['error' => 'В файле нет метки версии AviorSign. Из CRM ставятся прошивки 0.4.3 и новее; более старые — через локальную панель.'];
