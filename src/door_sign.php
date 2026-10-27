@@ -158,6 +158,9 @@ function door_sign_commands(array $sign): array
     if ((int) $sign['qr_seq'] > 0) {
         $out['qr'] = ['seq' => (int) $sign['qr_seq'], 'enabled' => (bool) $sign['qr_enabled'], 'url' => $sign['qr_url']];
     }
+    if ((int) ($sign['memory_seq'] ?? 0) > 0) {
+        $out['memory'] = ['seq' => (int) $sign['memory_seq']];
+    }
     if ((int) ($sign['panel_seq'] ?? 0) > 0) {
         $out['panel'] = ['seq' => (int) $sign['panel_seq'], 'user' => $sign['panel_user'], 'salt' => $sign['panel_salt'], 'hash' => $sign['panel_hash']];
     }

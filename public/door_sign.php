@@ -322,6 +322,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $finish('Прошивка ' . $check['version'] . ' загружена. Вывеска скачает её при следующей связи (во сне — до 15 минут) и перезапустится.');
     }
 
+    if ($action === 'memory_layout') {
+        if (!is_admin()) {
+            $finish('Перераспределять память может владелец или администратор.', false);
+        }
+        if (!array_key_exists('memory_seq', $sign)) {
+            $finish('Сначала примените миграцию 2026_10_28_door_sign_memory.sql.', false);
+        }
+        $seq = door_sign_next_seq($signId);
+        db()->prepare('UPDATE door_signs SET memory_seq = ? WHERE id = ?')->execute([$seq, $signId]);
+        door_sign_log($signId, $userId, 'memory', 'Команда: перераспределить память');
+        $finish('Команда отправлена. Вывеска перезапустится и перераспределит память при следующей связи; результат — в журнале.');
+    }
+
     if ($action === 'set_panel_login') {
         if (!is_admin()) {
             $finish('Задавать пароль панели может владелец или администратор.', false);
@@ -570,6 +583,17 @@ require __DIR__ . '/../src/layout_header.php';
           <?php endif; ?>
         </div>
         <progress id="dsFwProgress" max="1" value="0" hidden style="width:100%;margin-top:8px;"></progress>
+        <?php $slot = (int) ($reported['otaSlot'] ?? 0); if (array_key_exists('memory_seq', $sign) && $slot > 0 && $slot < 0x1A0000): ?>
+          <form method="post" style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;"
+            onsubmit="return confirm('Перераспределить память вывески?\n\nРаздел прошивки вырастет с 1,25 до 1,6 МБ, свои картинки скачаются из CRM заново.\nВывеска переписывает таблицу памяти за доли секунды; если в этот момент будет сбой, её придётся залить с ноутбука (архив 0.4.7-usb). Нужна прошивка 0.4.8 и заряд от 30 % или USB.');">
+            <input type="hidden" name="action" value="memory_layout">
+            <span style="font-size:14px;">Раздел прошивки: <b><?= number_format($slot / 1048576, 2, ',', '') ?> МБ</b>.</span>
+            <button class="btn btn-sm">Перераспределить память</button>
+            <span class="ds-muted">до 1,6 МБ — без ноутбука, прошивка 0.4.8+</span>
+          </form>
+        <?php elseif ($slot >= 0x1A0000): ?>
+          <p class="ds-muted" style="margin-top:10px;">Раздел прошивки: <?= number_format($slot / 1048576, 2, ',', '') ?> МБ — память уже перераспределена.</p>
+        <?php endif; ?>
       <?php endif; ?>
       <p class="ds-muted" style="margin:8px 0 0;">Файл — <code>firmware.bin</code> из сборки (из CRM ставятся версии 0.4.3 и новее, кроме диагностических). Вывеска скачивает его по HTTPS,
         сверяет контрольную сумму и перезапускается; если новая версия за 10 минут не выйдет на связь с CRM или будет перезапускаться без остановки, вывеска сама вернётся к прежней.</p>
