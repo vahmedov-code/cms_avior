@@ -364,6 +364,8 @@ function door_sign_battery_cycle(array $points): ?array
     for ($i = $start; $i < count($points) && !$usb($points[$i]); $i++) {
         $cycle[] = ['t' => (int) $points[$i]['ts'], 'mv' => (int) $points[$i]['raw_mv']];
     }
+    // Первые 15 минут после USB напряжение ещё завышено зарядкой — их не считаем.
+    $cycle = array_values(array_filter($cycle, function ($p) use ($cycle) { return $p['t'] - $cycle[0]['t'] >= 900; })) ?: $cycle;
     // Медиана по 5 соседним точкам убирает провалы под нагрузкой.
     $smooth = [];
     foreach ($cycle as $k => $p) {
@@ -371,6 +373,15 @@ function door_sign_battery_cycle(array $points): ?array
         sort($win);
         $smooth[] = ['t' => $p['t'], 'mv' => $win[intdiv(count($win), 2)]];
     }
+    // Разряд кончается на самом низком напряжении: после него вывеска выключилась,
+    // а точки после включения (напряжение «отдохнувшего» аккумулятора) в кривую не идут.
+    $low = 0;
+    foreach ($smooth as $k => $p) {
+        if ($p['mv'] <= $smooth[$low]['mv']) {
+            $low = $k;
+        }
+    }
+    $smooth = array_slice($smooth, 0, $low + 1);
     $first = $smooth[0];
     $last = $smooth[count($smooth) - 1];
     $hours = ($last['t'] - $first['t']) / 3600;
